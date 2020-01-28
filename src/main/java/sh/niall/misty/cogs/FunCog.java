@@ -17,6 +17,15 @@ public class FunCog extends Cog {
 
     OkHttpClient client = new OkHttpClient();
 
+    /**
+     * Randomly retrieve a string for the description of the dog embed
+     * @return a String that a dog says
+     */
+    private String getRandomWoofString() {
+        String[] choices = {"🐶 Woof! 🐶", "🐶 Bark! 🐶", "🐶 Arf! 🐶"};  // The choices we can choose from
+        return choices[(int) (Math.random() * choices.length)];  // Randomly return an element
+    }
+
     @Command(name = "dog", aliases = {"puppo", "puppos"})
     public void commandDog(Context context) throws IOException, CommandException {
         // We're doing a request, so send a typing message
@@ -49,7 +58,7 @@ public class FunCog extends Cog {
         } else {
             EmbedBuilder embedBuilder = new EmbedBuilder();
             embedBuilder.setTitle("Dog Photo!");
-            embedBuilder.setDescription("🐶 Woof! 🐶");
+            embedBuilder.setDescription(getRandomWoofString());
             embedBuilder.setColor(Color.cyan);
             embedBuilder.setImage(url);
             context.send(embedBuilder.build());
