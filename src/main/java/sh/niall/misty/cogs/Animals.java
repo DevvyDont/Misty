@@ -4,7 +4,6 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.commands.interfaces.Command;
@@ -13,21 +12,15 @@ import sh.niall.yui.exceptions.CommandException;
 import java.awt.*;
 import java.io.IOException;
 
-public class FunCog extends Cog {
+public class Animals extends Cog {
 
     OkHttpClient client = new OkHttpClient();
-
-    /**
-     * Randomly retrieve a string for the description of the dog embed
-     * @return a String that a dog says
-     */
-    private String getRandomWoofString() {
-        String[] choices = {"🐶 Woof! 🐶", "🐶 Bark! 🐶", "🐶 Arf! 🐶"};  // The choices we can choose from
-        return choices[(int) (Math.random() * choices.length)];  // Randomly return an element
-    }
+    String[] dogChoices = {"🐶 Woof! 🐶", "🐶 Bark! 🐶", "🐶 Arf! 🐶"};
+    String[] catChoices = {"\uD83D\uDC31 Meow! \uD83D\uDC31", "\uD83D\uDC31 Purr! \uD83D\uDC31"};
+    String[] catUrls = {"https://cataas.com/c", "https://cataas.com/c/gif"};
 
     @Command(name = "dog", aliases = {"puppo", "puppos"})
-    public void commandDog(Context context) throws IOException, CommandException {
+    public void _commandDog(Context context) throws IOException, CommandException {
         // We're doing a request, so send a typing message
         context.getChannel().sendTyping().queue();
 
@@ -58,7 +51,7 @@ public class FunCog extends Cog {
         } else {
             EmbedBuilder embedBuilder = new EmbedBuilder();
             embedBuilder.setTitle("Dog Photo!");
-            embedBuilder.setDescription(getRandomWoofString());
+            embedBuilder.setDescription(dogChoices[(int) (Math.random() * dogChoices.length)]);
             embedBuilder.setColor(Color.cyan);
             embedBuilder.setImage(url);
             context.send(embedBuilder.build());
@@ -69,5 +62,14 @@ public class FunCog extends Cog {
         dogRequest.close();
     }
 
-
+    @Command(name = "cat", aliases = {"meow"})
+    public void _commandCat(Context context) {
+        context.getChannel().sendTyping().queue();
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+        embedBuilder.setTitle("Cat Photo!");
+        embedBuilder.setDescription(catChoices[(int) (Math.random() * catChoices.length)]);
+        embedBuilder.setColor(Color.cyan);
+        embedBuilder.setImage(catUrls[(int) (Math.random() * catUrls.length)]);
+        context.send(embedBuilder.build());
+    }
 }

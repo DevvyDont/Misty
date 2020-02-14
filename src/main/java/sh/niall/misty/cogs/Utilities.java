@@ -1,19 +1,18 @@
 package sh.niall.misty.cogs;
 
 import net.dv8tion.jda.api.entities.User;
-import sh.niall.misty.utils.errors.ArgumentError;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.commands.interfaces.Command;
 import sh.niall.yui.exceptions.CommandException;
 
-public class UtilitiesCog extends Cog {
+public class Utilities extends Cog {
 
     /**
      * Sends the specified users avatar!
      */
     @Command(name = "avatar", aliases = {"avi"})
-    public void _commandAvatar(Context ctx) throws ArgumentError {
+    public void _commandAvatar(Context ctx) throws CommandException {
         // Create the target user
         User targetUser = null;
 
@@ -22,7 +21,7 @@ public class UtilitiesCog extends Cog {
             String target = ctx.getArgs().get(1).replace("<@!", "").replace(">", "");
             targetUser = ctx.getBot().getUserById(target);
             if (targetUser == null)
-                throw new ArgumentError("I can't find a user with the ID " + ctx.getArgs().get(1));
+                throw new CommandException("I can't find a user with the ID " + ctx.getArgs().get(1));
         }
 
         // Make the target the invoker
@@ -49,4 +48,5 @@ public class UtilitiesCog extends Cog {
             throw new CommandException("You're not currently in a voice channel, so I can't send a link.");
         }
     }
+
 }

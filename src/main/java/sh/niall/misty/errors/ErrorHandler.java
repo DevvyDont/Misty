@@ -1,30 +1,34 @@
-package sh.niall.misty.utils.errors;
+package sh.niall.misty.errors;
 
+import com.sun.tools.javac.resources.ct;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.MessageChannel;
 import sh.niall.misty.Misty;
-import sh.niall.yui.cogs.ErrorHandler;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.exceptions.YuiException;
 
 import java.awt.*;
 import java.time.LocalDateTime;
 
-public class MistyErrorHandler extends ErrorHandler {
-
+public class ErrorHandler extends sh.niall.yui.cogs.ErrorHandler {
     @Override
     public void onError(Context ctx, Throwable error) {
+        postError(ctx.getChannel(), error);
+    }
+
+    public void postError(MessageChannel channel, Throwable error) {
         EmbedBuilder embedBuilder = generateBaseEmbed();
-        embedBuilder.setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
+        //embedBuilder.setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
 
 
         if (error instanceof YuiException) {
             embedBuilder.addField("Information:", error.getMessage(), false);
-            ctx.send(embedBuilder.build());
+            channel.sendMessage(embedBuilder.build()).queue();
             return;
         }
 
         embedBuilder.addField("Bot Error", "I don't know how to handle this error! Please inform my developer!", false);
-        ctx.send(embedBuilder.build());
+        channel.sendMessage(embedBuilder.build()).queue();
         error.printStackTrace();
     }
 
