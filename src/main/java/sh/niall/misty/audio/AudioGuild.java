@@ -226,6 +226,14 @@ public class AudioGuild extends AudioEventAdapter {
         audioPlayer.destroy();
     }
 
+    public long getTrackLength() {
+        return audioPlayer.getPlayingTrack().getDuration();
+    }
+
+    public void seek(long seekTo) {
+        audioPlayer.getPlayingTrack().setPosition(seekTo);
+    }
+
     /**
      * Plays the next song based on the AudioGuild settings
      */

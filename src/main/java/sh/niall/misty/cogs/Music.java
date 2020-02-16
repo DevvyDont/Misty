@@ -3,6 +3,7 @@ package sh.niall.misty.cogs;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.MessageChannel;
 import org.apache.commons.lang3.StringUtils;
 import sh.niall.misty.audio.AudioGuild;
 import sh.niall.misty.audio.AudioGuildManager;
@@ -16,6 +17,7 @@ import sh.niall.yui.exceptions.CommandException;
 
 import java.awt.*;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class Music extends Cog {
 
@@ -305,6 +307,57 @@ public class Music extends Cog {
             ctx.send("\uD83D\uDD01 Shuffling!");
         else
             ctx.send("❌ No longer Shuffling!");
+    }
+
+    @Command(name = "seek")
+    public void _commandSeek(Context ctx) throws CommandException {
+        if (!AudioUtils.userInSameChannel(ctx))
+            throw new CommandException("You can't restart the song because we're not in the same voice channel!");
+
+        AudioGuild audioGuild = audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong());
+        if (audioGuild.getCurrentSong() == null || audioGuild.isPaused())
+            throw new CommandException("I'm currently not playing anything!");
+
+        if (ctx.getArgs().size() == 1)
+            throw new CommandException("Please provide a time to seek to.");
+
+        // First check we were given just colons and numbers
+        String time = ctx.getArgs().get(1);
+        if (!time.matches("[0-9:]+"))
+            throw new CommandException("Please provide a valid time to seek to. See `help seek` for more information");
+
+        // Get the times
+        String[] times = time.split(":");
+        int hours = 0, minutes = 0, seconds = 0;
+
+        if (times.length == 1) {
+            seconds = Integer.parseInt(times[0]);
+        } else if (times.length == 2) {
+            minutes = Integer.parseInt(times[0]);
+            seconds = Integer.parseInt(times[1]);
+
+            if (seconds > 59)
+                throw new CommandException("You can only seek up to 59 seconds when also providing minutes.");
+        } else if (times.length == 3) {
+            hours = Integer.parseInt(times[0]);
+            minutes = Integer.parseInt(times[1]);
+            seconds = Integer.parseInt(times[2]);
+
+            if (seconds > 59)
+                throw new CommandException("You can only seek up to 59 seconds when also providing minutes.");
+            else if (minutes > 59)
+                throw new CommandException("You can only seek up to 59 minutes when also providing hours.");
+        } else {
+            throw new CommandException("Please provide a valid time to seek to. See `help seek` for more information");
+        }
+
+        long totalTime = TimeUnit.HOURS.toMillis(hours) + TimeUnit.MINUTES.toMillis(minutes) + TimeUnit.SECONDS.toMillis(seconds);
+        if (totalTime >= audioGuild.getTrackLength())
+            throw new CommandException("You can't seek to a position longer than the song");
+
+        audioGuild.seek(totalTime);
+        audioGuild.setLastTextChannel(ctx.getChannel().getIdLong());
+        ctx.send("Seeking to: " + AudioUtils.durationToString(audioGuild.getCurrentSong().audioTrack.getPosition()));
     }
 
     @Command(name = "restart")
