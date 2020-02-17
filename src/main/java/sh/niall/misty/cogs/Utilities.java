@@ -17,11 +17,11 @@ public class Utilities extends Cog {
         User targetUser = null;
 
         // If we're given an ID, check to see if it's valid
-        if (ctx.getArgs().size() > 1) {
-            String target = ctx.getArgs().get(1).replace("<@!", "").replace(">", "");
+        if (!ctx.getArgsStripped().isEmpty()) {
+            String target = ctx.getArgsStripped().get(0).replace("<@!", "").replace(">", "");
             targetUser = ctx.getBot().getUserById(target);
             if (targetUser == null)
-                throw new CommandException("I can't find a user with the ID " + ctx.getArgs().get(1));
+                throw new CommandException("I can't find a user with the ID " + ctx.getArgsStripped().get(0));
         }
 
         // Make the target the invoker

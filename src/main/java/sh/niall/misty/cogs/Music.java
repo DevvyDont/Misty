@@ -57,7 +57,7 @@ public class Music extends Cog {
 
     @Command(name = "play", aliases = {"p"})
     public void _commandPlay(Context ctx) throws CommandException, InterruptedException {
-        if (ctx.getArgs().size() == 1)
+        if (ctx.getArgsStripped().isEmpty())
             throw new CommandException("Please provide a URL for me to play! If you were looking to resume playback, use `resume` instead.");
 
         // Check to see if user is in a voice channel
@@ -79,7 +79,7 @@ public class Music extends Cog {
         audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong()).setLastTextChannel(ctx.getChannel().getIdLong());
 
         // Setup the Query
-        String url = ctx.getArgs().get(1);
+        String url = ctx.getArgsStripped().get(0);
         AudioGuild audioGuild = audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong());
 
         // Run the Query
@@ -190,7 +190,7 @@ public class Music extends Cog {
         int skipTo;
 
         try {
-            skipTo = Integer.parseInt(ctx.getArgs().get(1));
+            skipTo = Integer.parseInt(ctx.getArgsStripped().get(0));
         } catch (NumberFormatException e) {
             throw new CommandException("Please provide a valid song to skip to. Hint: Use `queue` to get the songs number");
         }
@@ -221,7 +221,7 @@ public class Music extends Cog {
             throw new CommandException("I don't have a volume level because I'm not in a voice call");
 
         AudioGuild audioGuild = audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong());
-        if (ctx.getArgs().size() == 1) {
+        if (ctx.getArgsStripped().isEmpty()) {
             // Display the volume
             ctx.send("\uD83C\uDFA7 The current volume is " + audioGuild.getVolume() + "%");
             return;
@@ -233,11 +233,11 @@ public class Music extends Cog {
             throw new CommandException("You can't change the volume because we're not in the same voice channel!");
 
         // Detect if the first argument is a int
-        if (!ctx.getArgs().get(1).matches("-?(0|[1-9]\\d*)"))
+        if (!ctx.getArgsStripped().get(0).matches("-?(0|[1-9]\\d*)"))
             throw new CommandException("Please specify a valid number between 0-100 to change the volume to.");
 
         // Change the volume
-        int volume = Integer.parseInt(ctx.getArgs().get(1));
+        int volume = Integer.parseInt(ctx.getArgsStripped().get(0));
         audioGuild.setVolume(volume);
         audioGuild.setLastTextChannel(ctx.getChannel().getIdLong());
         ctx.send("\uD83C\uDFA7 The volume has been set to " + volume + "%");
@@ -318,11 +318,11 @@ public class Music extends Cog {
         if (audioGuild.getCurrentSong() == null || audioGuild.isPaused())
             throw new CommandException("I'm currently not playing anything!");
 
-        if (ctx.getArgs().size() == 1)
+        if (ctx.getArgsStripped().isEmpty())
             throw new CommandException("Please provide a time to seek to.");
 
         // First check we were given just colons and numbers
-        String time = ctx.getArgs().get(1);
+        String time = ctx.getArgsStripped().get(0);
         if (!time.matches("[0-9:]+"))
             throw new CommandException("Please provide a valid time to seek to. See `help seek` for more information");
 
