@@ -7,8 +7,10 @@ import org.slf4j.LoggerFactory;
 import sh.niall.misty.audio.AudioGuildManager;
 import sh.niall.misty.cogs.Animals;
 import sh.niall.misty.cogs.Music;
+import sh.niall.misty.cogs.Playlists;
 import sh.niall.misty.cogs.Utilities;
 import sh.niall.misty.errors.ErrorHandler;
+import sh.niall.misty.playlists.SongCache;
 import sh.niall.misty.utils.config.Config;
 import sh.niall.misty.utils.config.ConfigLoader;
 import sh.niall.misty.utils.database.Database;
@@ -41,11 +43,13 @@ public class Misty {
 
         // Create the audio manager
         AudioGuildManager audioGuildManager = new AudioGuildManager(yui);
+        SongCache songCache = new SongCache(yui, audioGuildManager.getAudioPlayerManager());
 
         // Add the cogs in
         yui.addCogs(
                 new Animals(),
                 new Music(audioGuildManager),
+                new Playlists(audioGuildManager, songCache),
                 new Utilities()
         );
 
