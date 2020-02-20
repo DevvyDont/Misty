@@ -9,6 +9,7 @@ import sh.niall.misty.audio.AudioGuild;
 import sh.niall.misty.audio.AudioGuildManager;
 import sh.niall.misty.audio.TrackRequest;
 import sh.niall.misty.errors.AudioException;
+import sh.niall.misty.errors.MistyException;
 import sh.niall.misty.utils.audio.AudioUtils;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
@@ -56,7 +57,7 @@ public class Music extends Cog {
     }
 
     @Command(name = "play", aliases = {"p"})
-    public void _commandPlay(Context ctx) throws CommandException, InterruptedException {
+    public void _commandPlay(Context ctx) throws CommandException, InterruptedException, AudioException, MistyException {
         if (ctx.getArgsStripped().isEmpty())
             throw new CommandException("Please provide a URL for me to play! If you were looking to resume playback, use `resume` instead.");
 
@@ -83,28 +84,22 @@ public class Music extends Cog {
         AudioGuild audioGuild = audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong());
 
         // Run the Query
-        AudioUtils.runQuery(audioGuildManager.getAudioPlayerManager(), url, ctx.getGuild(), (audioTracks, error) -> {
-            // Check if there was an error
-            if (error != null) {
-                getYui().getErrorHandler().onError(ctx, error);
-                return;
-            }
+        List<AudioTrack> trackList = AudioUtils.runQuery(audioGuildManager.getAudioPlayerManager(), url, ctx.getGuild());
 
-            // Queue the music
-            for (AudioTrack audioTrack : audioTracks) {
-                audioGuild.addToQueue(new TrackRequest(audioTrack, ctx.getAuthor().getIdLong()));
-            }
+        // Queue the music
+        for (AudioTrack audioTrack : trackList) {
+            audioGuild.addToQueue(new TrackRequest(audioTrack, ctx.getAuthor().getIdLong()));
+        }
 
-            // Play the music
-            if (audioGuild.getAudioPlayer().getPlayingTrack() == null)
-                audioGuild.play();
+        // Play the music
+        if (audioGuild.getAudioPlayer().getPlayingTrack() == null)
+            audioGuild.play();
 
-            // Inform the invoker
-            if (audioTracks.size() == 1)
-                ctx.send("Added the song `" + audioTracks.get(0).getInfo().title + "` to the queue!");
-            else
-                ctx.send("Added `" + audioTracks.size() + "` songs to the queue!");
-        });
+        // Inform the invoker
+        if (trackList.size() == 1)
+            ctx.send("Added the song `" + trackList.get(0).getInfo().title + "` to the queue!");
+        else
+            ctx.send("Added `" + trackList.size() + "` songs to the queue!");
     }
 
     @Command(name = "pause")

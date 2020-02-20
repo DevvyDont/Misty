@@ -11,12 +11,13 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.VoiceChannel;
 import sh.niall.misty.errors.AudioException;
-import sh.niall.misty.utils.audio.interfaces.TrackQueryCallback;
+import sh.niall.misty.errors.MistyException;
+import sh.niall.misty.utils.audio.helpers.TrackWaiter;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.exceptions.CommandException;
 
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 public class AudioUtils {
 
@@ -56,28 +57,30 @@ public class AudioUtils {
         return String.format("%02d:%02d", minutes, seconds);
     }
 
-    public static void runQuery(AudioPlayerManager audioMgr, String query, Guild guild, TrackQueryCallback callback) {
+    public static List<AudioTrack> runQuery(AudioPlayerManager audioMgr, String query, Guild guild) throws MistyException, AudioException {
+        TrackWaiter waiter = new TrackWaiter();
         audioMgr.loadItemOrdered(guild, query, new AudioLoadResultHandler() {
             @Override
             public void trackLoaded(AudioTrack track) {
-                callback.results(Collections.singletonList(track), null);
+                waiter.setResult(Collections.singletonList(track), null);
             }
 
             @Override
             public void playlistLoaded(AudioPlaylist playlist) {
-                callback.results(playlist.getTracks(), null);
+                waiter.setResult(playlist.getTracks(), null);
             }
 
             @Override
             public void noMatches() {
-                callback.results(null, new AudioException("No results found!"));
+                waiter.setResult(null, new AudioException("No results found!"));
             }
 
             @Override
             public void loadFailed(FriendlyException exception) {
-                callback.results(null, new AudioException(exception.getMessage()));
+                waiter.setResult(null, new AudioException(exception.getMessage()));
             }
         });
+        return waiter.getResult();
     }
 
 }
