@@ -6,7 +6,10 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.MessageReaction;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
+import sh.niall.misty.errors.MistyException;
 import sh.niall.yui.Yui;
+import sh.niall.yui.exceptions.WaiterException;
+import sh.niall.yui.waiter.WaiterStorage;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -47,13 +50,16 @@ public class Paginator {
     }
 
     private void waitForReaction() {
-        yui.getEventWaiter().waitForNewEvent(
-                GuildMessageReactionAddEvent.class,
-                event -> ((GuildMessageReactionAddEvent) event).getMessageIdLong() == messageId &&
-                        ((GuildMessageReactionAddEvent) event).getMember().getIdLong() != jda.getSelfUser().getIdLong(),
-                event -> handleNewReaction(((GuildMessageReactionAddEvent) event)),
-                timeout,
-                TimeUnit.SECONDS);
+        WaiterStorage waiterStorage = new WaiterStorage(GuildMessageReactionAddEvent.class, check ->{
+            GuildMessageReactionAddEvent e = (GuildMessageReactionAddEvent) check;
+            return (e.getMessageIdLong() == messageId) && (e.getMember().getIdLong() != jda.getSelfUser().getIdLong());
+        }, timeout, TimeUnit.SECONDS);
+        yui.getEventWaiter().waitForNewEvent(waiterStorage);
+        try {
+            handleNewReaction((GuildMessageReactionAddEvent) waiterStorage.getEvent());
+        } catch (WaiterException e) {
+            yui.getErrorHandler().onError(null, new MistyException("Error waiting for reaction"));
+        }
     }
 
     private void handleNewReaction(GuildMessageReactionAddEvent event) {

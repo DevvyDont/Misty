@@ -4,6 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
@@ -14,9 +15,11 @@ import sh.niall.misty.playlists.PlaylistUtils;
 import sh.niall.misty.playlists.SongCache;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
+import sh.niall.yui.commands.interfaces.Command;
 import sh.niall.yui.commands.interfaces.Group;
 import sh.niall.yui.commands.interfaces.GroupCommand;
 import sh.niall.yui.exceptions.CommandException;
+import sh.niall.yui.exceptions.WaiterException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +50,7 @@ public class Playlists extends Cog {
     @GroupCommand(group = "playlist", name = "create")
     public void _commandCreate(Context ctx) throws CommandException {
         // Get all of the users playlists, ensure they have less than 10
-        if(db.count(Filters.eq("author", ctx.getAuthor().getIdLong())) >= maxPlaylists)
+        if (db.count(Filters.eq("author", ctx.getAuthor().getIdLong())) >= maxPlaylists)
             throw new CommandException("You can only have a total of " + maxPlaylists + " playlists!");
 
         // Merge the name
@@ -78,7 +81,7 @@ public class Playlists extends Cog {
     }
 
     @GroupCommand(group = "playlist", name = "delete")
-    public void _commandDelete(Context ctx) throws CommandException {
+    public void _commandDelete(Context ctx) throws CommandException, WaiterException {
         // Get the playlist name
         String name = String.join(" ", ctx.getArgsStripped());
         String lowerName = name.toLowerCase();
@@ -115,35 +118,32 @@ public class Playlists extends Cog {
         question.addReaction("❌").complete();
 
         // Wait for the response
-        getYui().getEventWaiter().waitForNewEvent(GuildMessageReactionAddEvent.class, event -> {
-            // Make sure, Reaction on correct message, Reaction came from author, Reaction is valid
-            GuildMessageReactionAddEvent e = (GuildMessageReactionAddEvent) event;
-            return (e.getMember().getIdLong() == ctx.getAuthor().getIdLong()) &&
-                    (e.getMessageIdLong() == question.getIdLong()) &&
-                    (e.getReactionEmote().getEmoji().equals("✅") ||
-                    e.getReactionEmote().getEmoji().equals("❌"));
-        }, event -> {
-            // Delete the question message
-            question.delete().queue();
+        GuildMessageReactionAddEvent reactionAddEvent = (GuildMessageReactionAddEvent) waitForEvent(
+                GuildMessageReactionAddEvent.class, event -> {
+                    GuildMessageReactionAddEvent e = (GuildMessageReactionAddEvent) event;
+                    return (e.getMember().getIdLong() == ctx.getAuthor().getIdLong()) &&
+                            (e.getMessageIdLong() == question.getIdLong()) &&
+                            (e.getReactionEmote().getEmoji().equals("✅") || e.getReactionEmote().getEmoji().equals("❌"));
+                }, 15, TimeUnit.SECONDS);
 
-            // If we timed out, null is returned
-            if (event == null)
-                getYui().getErrorHandler().onError(ctx, new CommandException("Timed out waiting for deletion conformation"));
+        // Delete the question and ignore if they said nothing
+        question.delete().queue();
+        if (reactionAddEvent == null)
+            throw new CommandException("Timed out waiting for deletion conformation");
 
-            // Cast and handle confirm logic
-            GuildMessageReactionAddEvent e = (GuildMessageReactionAddEvent) event;
-            if (e.getReactionEmote().getEmoji().equals("❌")) {
-                ctx.send("Playlist delete canceled");
-                return;
-            }
+        // Handle no logic
+        if (reactionAddEvent.getReactionEmote().getEmoji().equals("❌")) {
+            ctx.send("Playlist delete canceled");
+            return;
+        }
 
-            db.deleteOne(Filters.eq("_id", document.get("_id", ObjectId.class)));
-            ctx.send("Playlist `" + name + "` deleted!");
-        }, 15, TimeUnit.SECONDS);
+        // If they said yes, delete it!
+        db.deleteOne(Filters.eq("_id", document.get("_id", ObjectId.class)));
+        ctx.send("Playlist `" + name + "` deleted!");
     }
 
     @GroupCommand(group = "playlist", name = "edit")
-    public void _commandEdit(Context ctx) throws CommandException {
+    public void _commandEdit(Context ctx) throws CommandException, WaiterException {
         // Get the playlist name
         String name = String.join(" ", ctx.getArgsStripped());
         String lowerName = name.toLowerCase();
@@ -156,15 +156,71 @@ public class Playlists extends Cog {
                 Filters.eq("author", ctx.getAuthor().getIdLong()),
                 Filters.eq("searchName", lowerName)
         )).first();
+        if (document == null)
+            throw new CommandException("Playlist " + name + "does not exist!");
+
+        // Now we need to ask the user what they want to edit
+        ctx.send("What would you like to edit?\n1. Playlist name\n2. Playlist Description\n3. Playlist Image\n4. Playlist Editors\n(Type menu number to select)");
+        int menuOption;
+        int attempts = 0;
+        while (true) {
+            if (attempts > 3)
+                throw new CommandException("Too many attempts, cancelling menu.");
+
+            GuildMessageReceivedEvent message = (GuildMessageReceivedEvent) waitForEvent(
+                    GuildMessageReceivedEvent.class,
+                    check -> {
+                        GuildMessageReceivedEvent e = (GuildMessageReceivedEvent) check;
+                        return (e.getChannel().getIdLong() == ctx.getChannel().getIdLong()) && (e.getAuthor().getIdLong() == ctx.getAuthor().getIdLong());
+                    }, 15, TimeUnit.SECONDS
+            );
+            attempts++;
+            if (message == null)
+                throw new CommandException("Timed out waiting for your option");
+
+            if (!message.getMessage().getContentRaw().matches("\\d+")) {
+                ctx.send("Invalid option, please try again");
+                continue;
+            }
+            menuOption = Integer.parseInt(message.getMessage().getContentRaw());
+            if (menuOption < 1 || menuOption > 4) {
+                ctx.send("Invalid option, please try again");
+                continue;
+            }
+            break;
+        }
+
+        if (menuOption == 1) {
+            // Edit playlist name
+
+            ctx.send("Please enter the new playlist name");
+            GuildMessageReceivedEvent newNameMessage = (GuildMessageReceivedEvent) waitForEvent(
+                    GuildMessageReceivedEvent.class,
+                    check -> {
+                        GuildMessageReceivedEvent e = (GuildMessageReceivedEvent) check;
+                        return (e.getChannel().getIdLong() == ctx.getChannel().getIdLong()) && (e.getAuthor().getIdLong() == ctx.getAuthor().getIdLong());
+                    }, 15, TimeUnit.SECONDS
+            );
+            String newName = newNameMessage.getMessage().getContentRaw();
+            PlaylistUtils.validateName(newName);
 
 
 
-        // Edit name
-        // Edit Editors
-        // Edit image
-        // Edit Description
+
+
+
+
+
+
+        } else if (menuOption == 2) {
+            // Edit Description
+            System.out.println("Editing Desc");
+        } else if (menuOption == 3) {
+            // Edit Image
+            System.out.println("Editing Image");
+        } else if (menuOption == 4) {
+            // Edit Editors
+            System.out.println("Editing Editors");
+        }
     }
-
-
-
 }
