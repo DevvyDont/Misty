@@ -21,6 +21,15 @@ public class PlaylistUtils {
 
         if (name.replace(" ", "").length() < nameCharacterMin)
             throw new CommandException("Playlist name must have at least " + nameCharacterMin + " characters!");
+
+        if (!name.equals(name.replaceAll(" +", " ")))
+            throw new CommandException("Playlist names can't have multiple spaces per word!");
+
+        if (name.startsWith(" "))
+            throw new CommandException("Playlist names can't start with a space!");
+
+        if (!name.matches(".*[a-zA-Z]+.*"))
+            throw new CommandException("Playlist names must contain at least one letter in the title.");
     }
 
     public static String getName(Context ctx, long id) {

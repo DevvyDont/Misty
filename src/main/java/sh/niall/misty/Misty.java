@@ -28,7 +28,6 @@ public class Misty {
 
     public static void main(String[] args) throws LoginException, FileNotFoundException, PrefixException {
         // Initialize globals
-        System.out.println(System.getProperty("user.dir"));
         config = ConfigLoader.loadConfig();
         database = new Database();
 
