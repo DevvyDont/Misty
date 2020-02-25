@@ -11,25 +11,28 @@ public class PlaylistUtils {
 
     static int nameCharacterMin = 3;
     static int nameCharacterMax = 30;
+    static int wordLengthMax = 13;
 
+    /**
+     * Validates the playlist names and returns the "searchName"
+     */
     public static void validateName(String name) throws CommandException {
-        if (name.length() > nameCharacterMax)
-            throw new CommandException("Playlist names must be under " + nameCharacterMax + " characters!");
+        String nameTrim = name.trim();
+        int totalCharacters = nameTrim.replace(" ", "").length();
+
+        if (totalCharacters > nameCharacterMax || totalCharacters < nameCharacterMin)
+            throw new CommandException("Playlist names must be between " + nameCharacterMin + " and " + nameCharacterMax + " characters!");
 
         if (!name.matches("^[a-zA-Z0-9 ]*$"))
             throw new CommandException("Playlist name must only contain alphanumeric characters (a-Z & 0-9)!");
 
-        if (name.replace(" ", "").length() < nameCharacterMin)
-            throw new CommandException("Playlist name must have at least " + nameCharacterMin + " characters!");
-
         if (!name.equals(name.replaceAll(" +", " ")))
-            throw new CommandException("Playlist names can't have multiple spaces per word!");
+            throw new CommandException("Playlist names can't have multiple spaces!");
 
-        if (name.startsWith(" "))
-            throw new CommandException("Playlist names can't start with a space!");
-
-        if (!name.matches(".*[a-zA-Z]+.*"))
-            throw new CommandException("Playlist names must contain at least one letter in the title.");
+        for (String word : nameTrim.split(" ")) {
+            if (word.length() > wordLengthMax)
+                throw new CommandException("Each word in a playlist name can only be " + wordLengthMax + " characters long!");
+        }
     }
 
     public static String getName(Context ctx, long id) {

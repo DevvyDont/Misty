@@ -1,15 +1,19 @@
 package sh.niall.misty.cogs;
 
+import com.linkedin.urls.Url;
+import com.linkedin.urls.detection.UrlDetector;
+import com.linkedin.urls.detection.UrlDetectorOptions;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
-import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import sh.niall.misty.Misty;
 import sh.niall.misty.audio.AudioGuildManager;
+import sh.niall.misty.errors.AudioException;
+import sh.niall.misty.errors.MistyException;
 import sh.niall.misty.playlists.PlaylistUtils;
 import sh.niall.misty.playlists.SongCache;
 import sh.niall.misty.utils.cogs.MistyCog;
@@ -21,10 +25,11 @@ import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.WaiterException;
 
 import java.awt.*;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -59,7 +64,7 @@ public class Playlists extends MistyCog {
 
         // Merge the name
         String name = String.join(" ", ctx.getArgsStripped());
-        String lowerName = name.toLowerCase();
+        String lowerName = name.trim().toLowerCase();
 
         // Validate the name
         PlaylistUtils.validateName(name);
@@ -88,7 +93,7 @@ public class Playlists extends MistyCog {
     public void _commandDelete(Context ctx) throws CommandException, WaiterException {
         // Get the playlist name
         String name = String.join(" ", ctx.getArgsStripped());
-        String lowerName = name.toLowerCase();
+        String lowerName = name.trim().toLowerCase();
 
         // Validate the playlist name
         PlaylistUtils.validateName(name);
@@ -132,7 +137,7 @@ public class Playlists extends MistyCog {
     public void _commandEdit(Context ctx) throws CommandException, WaiterException {
         // Get the playlist name
         String name = String.join(" ", ctx.getArgsStripped());
-        String lowerName = name.toLowerCase();
+        String lowerName = name.trim().toLowerCase();
 
         // Validate the playlist name
         PlaylistUtils.validateName(name);
@@ -392,22 +397,91 @@ public class Playlists extends MistyCog {
     }
 
     @GroupCommand(group = "playlist", name = "add", aliases = {"a"})
-    public void _commandAdd(Context ctx) throws CommandException {
-        // >pl add 43280943820438 iojdasjiaidsjadojads url url url url url
-        if (ctx.getArgsStripped().size() == 0)
-            throw new CommandException("Please provide a playlist name to add a song to");
+    public void _commandAdd(Context ctx) throws CommandException, AudioException, MistyException, IOException {
+        if (ctx.getArgsStripped().size() < 2)
+            throw new CommandException("Please provide a playlist name and a url.");
         List<String> args = new ArrayList<>(ctx.getArgsStripped());
 
-        // First let's work out our target
+        /*
+        * First let's work out our target
+        * Playlist names are limited in creation so we can just test for a long with 15-21 numbers
+        */
         long targetId = ctx.getAuthor().getIdLong();
         String possibleTarget = args.get(0).replace("<@", "").replace("!", "").replace(">", "");
-        if (possibleTarget.matches("\\d+"))
-            targetId = 
+        if (15 <= possibleTarget.length() && possibleTarget.length() <= 21 && possibleTarget.matches("\\d+")) {
+            targetId = Long.parseLong(possibleTarget);
+            args.remove(0);
+        }
 
+        // Now we need to find the URLs
+        List<Url> detectedUrls = new UrlDetector(String.join(" ", args), UrlDetectorOptions.Default).detect();
+        if (detectedUrls.isEmpty())
+            throw new CommandException("Please provide a song url to add to the playlist");
 
+        // Store the first url location
+        System.out.println(args);
+        System.out.println(detectedUrls.get(0).getFullUrl());
+        int urlIndex = args.indexOf(detectedUrls.get(0).getFullUrl());
 
+        // Validate the URLS are valid
+        List<String> validUrls = new ArrayList<>();
+        for (Url url : detectedUrls) {
+            // Currently the only requirement is they're either a youtube/soundcloud song or playlist
+            String cleanUrl = url.getHost().trim().toLowerCase().replace("www.", "");
+            if (cleanUrl.equals("youtu.be") && url.getPath().length() > 1) {
+                validUrls.add("https://www.youtube.com/watch?v=" + url.getPath().substring(1));
+                continue;
+            } else if (cleanUrl.equals("youtube.com")) {
+                validUrls.add(url.getFullUrl());
+                continue;
+            } else if (cleanUrl.equals("soundcloud.com")) {
+                // TODO: Soundcloud
+            }
+            throw new CommandException("Unsupported URL given " + url.getFullUrl());
+        }
 
+        // Locate the playlist name
+        String playlistName = String.join(" ", args.subList(0, urlIndex));
+        String lowerName = playlistName.trim().toLowerCase();
 
+        // Find the playlist and validate the invoker has editor permissions
+        Document document = db.find(Filters.and(Filters.eq("author", targetId), Filters.eq("searchName", lowerName))).first();
+        if (document == null)
+            throw new CommandException("I can't find a playlist called `" + playlistName + "`!");
+        if (!(document.getLong("author") == ctx.getAuthor().getIdLong() ||((List<Long>) document.get("editors")).contains(ctx.getAuthor().getIdLong())))
+            throw new CommandException("You don't have permission to edit `" + playlistName + "`!");
+
+        // Now we have to validate our songs to add
+        List<String> toAdd = new ArrayList<>();
+        for (String url : validUrls) {
+            String lowerUrl = url.trim().toLowerCase();
+            if (lowerUrl.contains("youtube.com/")) {
+                // Now we have to detect if we have a playlist
+                if (lowerUrl.contains("list=")) {
+                    for (AudioTrack track : songCache.getPlaylist(ctx.getGuild(), url))
+                        toAdd.add(track.getInfo().uri);
+                } else if (lowerUrl.contains("watch?v="))
+                    toAdd.add(songCache.getTrack(ctx.getGuild(), url).getInfo().uri);
+            }
+        }
+        int foundSongs = toAdd.size();
+        toAdd = new ArrayList<>(new HashSet<>(toAdd));
+
+        // Now to add them
+        List<String> songList = (List<String>) document.get("songList");
+        int oldSize = songList.size();
+
+        if (toAdd.size() + oldSize > playlistSongLimit)
+            throw new CommandException("There's not enough room in the playlist to add `" + toAdd.size() + "` songs!");
+
+        songList.addAll(toAdd);
+        songList = new ArrayList<>(new HashSet<>(songList));
+
+        Document updatedDocument = new Document();
+        updatedDocument.append("songList", songList);
+        db.updateOne(Filters.eq("_id", document.get("_id", ObjectId.class)), new Document("$set", updatedDocument));
+
+        ctx.send(String.format("Found %s songs and added %s songs which brings the playlist total to %s songs!", foundSongs, songList.size() - oldSize, songList.size()));
     }
 
     private String getNextMessage(Context ctx) throws WaiterException {

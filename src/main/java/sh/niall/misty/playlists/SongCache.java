@@ -19,12 +19,14 @@ import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
 import sh.niall.misty.utils.audio.AudioUtils;
 import sh.niall.yui.Yui;
+import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.tasks.LoopStorage;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -50,28 +52,49 @@ public class SongCache {
         });
     }
 
-    public AudioTrack getTrack(Guild guild, String url) throws AudioException, MistyException, IOException {
-        return getTrack(guild, url, true);
-    }
-
-    public AudioTrack getTrack(Guild guild, String url, boolean useCache) throws AudioException, MistyException, IOException {
+    public AudioTrack getTrack(Guild guild, String url) throws AudioException, MistyException, IOException, CommandException {
         // First check the database
         Document document = db.find(Filters.eq("url", url)).first();
         if (document != null)
             return decodeString(document.getString("data"));
 
         // We don't have the track in the database
-        AudioTrack track = AudioUtils.runQuery(audioPlayerManager, url, guild).get(0);
+        List<AudioTrack> tracks = AudioUtils.runQuery(audioPlayerManager, url, guild);
+        if (tracks.isEmpty())
+            throw new CommandException("URL returned no results!");
 
         // Store in db
         document = new Document();
         document.append("url", url);
-        document.append("data", encodeTrack(track));
+        document.append("data", encodeTrack(tracks.get(0)));
         document.append("expires", Instant.now().getEpochSecond() + TimeUnit.DAYS.toSeconds(daysToExpire));
         db.insertOne(document);
 
         // Give it back
-        return track;
+        return tracks.get(0);
+    }
+
+    public List<AudioTrack> getPlaylist(Guild guild, String url) throws AudioException, MistyException, CommandException, IOException {
+        // URLs we want to query directly and then cache the videos
+        List<AudioTrack> tracks = AudioUtils.runQuery(audioPlayerManager, url, guild);
+        if (tracks.isEmpty())
+            throw new CommandException("URL returned no results!");
+
+        List<AudioTrack> addedTracks = new ArrayList<>();
+        for (AudioTrack track : tracks) {
+            Document document = db.find(Filters.eq("url", track.getInfo().uri)).first();
+            addedTracks.add(track);
+            if (document != null)
+                continue;
+
+            // Store in db
+            document = new Document();
+            document.append("url", track.getInfo().uri);
+            document.append("data", encodeTrack(track));
+            document.append("expires", Instant.now().getEpochSecond() + TimeUnit.DAYS.toSeconds(daysToExpire));
+            db.insertOne(document);
+        }
+        return addedTracks;
     }
 
     private String encodeTrack(AudioTrack audioTrack) throws IOException {

@@ -27,6 +27,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.8.6'
     compile 'org.mongodb:mongo-java-driver:3.4.3'
     implementation 'com.squareup.okhttp3:okhttp:4.2.1'
+    implementation 'com.github.URL-Detector:URL-Detector:url-detector-0.1.22-SNAPSHOT'
 }
 
 compileJava.options.encoding = 'UTF-8'
