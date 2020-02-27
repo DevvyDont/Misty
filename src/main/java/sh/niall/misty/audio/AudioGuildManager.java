@@ -7,7 +7,6 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.VoiceChannel;
 import net.dv8tion.jda.api.managers.AudioManager;
-import sh.niall.misty.errors.AudioException;
 import sh.niall.yui.Yui;
 import sh.niall.yui.exceptions.CommandException;
 
@@ -29,7 +28,7 @@ public class AudioGuildManager {
 
         // Start the inactive checker
         yui.getExecutor().submit(() -> {
-            while(true) {
+            while (true) {
                 Thread.sleep(10000);
                 runInactiveCheck();
             }
@@ -42,6 +41,7 @@ public class AudioGuildManager {
 
     /**
      * Gets the audio guild for the specified guild. Creates a new one if it doesn't exist.
+     *
      * @param guildId The guild id to search for
      * @return The AudioGuild for the specified guild
      */
@@ -57,6 +57,7 @@ public class AudioGuildManager {
 
     /**
      * Deletes a guilds AudioGuild. Remains silent if one doesn't exist.
+     *
      * @param guildId The guildId of the AudioGuild you want to delete
      */
     public void deleteAudioGuild(long guildId) {

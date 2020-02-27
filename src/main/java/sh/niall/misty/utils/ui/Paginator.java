@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
 import sh.niall.misty.errors.MistyException;
 import sh.niall.yui.Yui;
+import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.WaiterException;
 import sh.niall.yui.waiter.WaiterStorage;
 
@@ -27,11 +28,14 @@ public class Paginator {
     // Emojis
     String leftArrow = "⬅️";
     String rightArrow = "➡️";
-    
+
     // Indexs
     private int currentIndex = 0;
 
-    public Paginator(Yui yui, TextChannel channel, List<MessageEmbed> pages, int timeout) {
+    public Paginator(Yui yui, TextChannel channel, List<MessageEmbed> pages, int timeout) throws CommandException {
+        if (pages.isEmpty())
+            throw new CommandException("No pages were found!");
+
         this.pages = pages;
         this.yui = yui;
         this.jda = yui.getJda();
@@ -43,6 +47,8 @@ public class Paginator {
     public void run() {
         TextChannel channel = jda.getGuildById(this.guildId).getTextChannelById(this.channelId);
         Message message = channel.sendMessage(pages.get(0)).complete();
+        if (pages.size() == 1)
+            return;
         messageId = message.getIdLong();
         message.addReaction(leftArrow).complete();
         message.addReaction(rightArrow).complete();
@@ -50,7 +56,7 @@ public class Paginator {
     }
 
     private void waitForReaction() {
-        WaiterStorage waiterStorage = new WaiterStorage(GuildMessageReactionAddEvent.class, check ->{
+        WaiterStorage waiterStorage = new WaiterStorage(GuildMessageReactionAddEvent.class, check -> {
             GuildMessageReactionAddEvent e = (GuildMessageReactionAddEvent) check;
             return (e.getMessageIdLong() == messageId) && (e.getMember().getIdLong() != jda.getSelfUser().getIdLong());
         }, timeout, TimeUnit.SECONDS);

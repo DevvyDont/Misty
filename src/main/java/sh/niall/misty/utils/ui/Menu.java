@@ -1,6 +1,5 @@
 package sh.niall.misty.utils.ui;
 
-import com.sun.tools.javac.util.StringUtils;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.exceptions.CommandException;
@@ -32,7 +31,7 @@ public class Menu {
         ctx.send(builder.toString() + String.format("(Reply menu number to select [1-%s])", menuCount));
 
         // Loop over for their attempts
-        while(attempts < maxAttempts) {
+        while (attempts < maxAttempts) {
             attempts++;
 
             // Listen for their message

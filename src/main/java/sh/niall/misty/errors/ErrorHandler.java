@@ -1,6 +1,5 @@
 package sh.niall.misty.errors;
 
-import com.sun.tools.javac.resources.ct;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageChannel;
 import sh.niall.misty.Misty;

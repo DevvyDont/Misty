@@ -1,16 +1,12 @@
 package sh.niall.misty.playlists;
 
-import com.mongodb.DBCursor;
-import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Filters;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.tools.io.MessageInput;
 import com.sedmelluq.discord.lavaplayer.tools.io.MessageOutput;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.managers.AudioManager;
 import org.apache.commons.codec.binary.Base64;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -20,7 +16,6 @@ import sh.niall.misty.errors.MistyException;
 import sh.niall.misty.utils.audio.AudioUtils;
 import sh.niall.yui.Yui;
 import sh.niall.yui.exceptions.CommandException;
-import sh.niall.yui.tasks.LoopStorage;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

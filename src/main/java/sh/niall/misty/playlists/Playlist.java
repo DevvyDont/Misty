@@ -84,7 +84,7 @@ public class Playlist {
         image = document.getString("image");
         isPrivate = document.getBoolean("isPrivate");
         description = document.getString("description");
-        editors = (List<Long>) document.get("editors");
+        editors = new ArrayList<>((List<Long>) document.get("editors"));
         plays = document.getInteger("plays");
         originalDocument = document;
 
@@ -168,7 +168,7 @@ public class Playlist {
             // Handle Song list
             Set<String> oldUrlSet = originalDocument.get("songList", Document.class).keySet();
             Set<String> newUrlSet = this.songList.keySet();
-            if (oldUrlSet.size() == newUrlSet.size()) {
+            if (oldUrlSet.size() != newUrlSet.size()) {
                 Document storeList = new Document();
                 for (Map.Entry<String, PlaylistSong> song : this.songList.entrySet())
                     storeList.put(song.getKey(), song.getValue().toDocument());

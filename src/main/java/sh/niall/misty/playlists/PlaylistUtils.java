@@ -5,6 +5,7 @@ import com.linkedin.urls.detection.UrlDetector;
 import com.linkedin.urls.detection.UrlDetectorOptions;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
+import sh.niall.misty.playlists.containers.PlaylistLookupContainer;
 import sh.niall.misty.playlists.containers.PlaylistUrlsContainer;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.exceptions.CommandException;
@@ -85,7 +86,7 @@ public class PlaylistUtils {
         long targetId = ctx.getAuthor().getIdLong();
         String firstArg = args.get(0);
         if (firstArg.length() < wordLengthMax) {
-            String possibleTarget = firstArg.replace("<@!", "!").replace("<@", "").replace(">", "");
+            String possibleTarget = firstArg.replace("<@!", "").replace("<@", "").replace(">", "");
             if (15 <= possibleTarget.length() && possibleTarget.length() <= 21 && possibleTarget.matches("\\d+")) {
                 targetId = Long.parseLong(possibleTarget);
                 args.remove(0);
@@ -104,11 +105,36 @@ public class PlaylistUtils {
         return new PlaylistUrlsContainer(targetId, searchName, detectedUrls);
     }
 
+    public static PlaylistLookupContainer getTargetAndName(Context ctx) throws CommandException {
+        // Set default values
+        long targetId = ctx.getAuthor().getIdLong();
+        String playlistName = "";
+        List<String> args = new ArrayList<>(ctx.getArgsStripped());
+
+        // First work out if we have a possible target
+        if (!args.isEmpty()) {
+            String possibleTarget = args.get(0).replace("<@!", "").replace("<@", "").replace(">", "");
+            int length = possibleTarget.length();
+            if (15 <= length && length <= 21 && possibleTarget.matches("\\d+")) {
+                targetId = Long.parseLong(possibleTarget);
+                args.remove(0);
+            }
+        }
+
+        // Now work if we have a playlist name
+        if (!args.isEmpty()) {
+            playlistName = String.join(" ", args);
+        }
+
+        // Return it
+        return new PlaylistLookupContainer(targetId, playlistName);
+    }
+
     public static String getYoutubeVideoId(String url) {
         Matcher matcher = ytVideoIdPattern.matcher(url);
         if (!matcher.find())
             return null;
-        return matcher.group(1);
+        return matcher.group();
     }
 
     public static String getYoutubePlaylistId(String url) {

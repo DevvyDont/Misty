@@ -3,7 +3,6 @@ package sh.niall.misty.cogs;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.MessageChannel;
 import org.apache.commons.lang3.StringUtils;
 import sh.niall.misty.audio.AudioGuild;
 import sh.niall.misty.audio.AudioGuildManager;
@@ -61,23 +60,8 @@ public class Music extends Cog {
         if (ctx.getArgsStripped().isEmpty())
             throw new CommandException("Please provide a URL for me to play! If you were looking to resume playback, use `resume` instead.");
 
-        // Check to see if user is in a voice channel
-        if (!AudioUtils.userInVoice(ctx))
-            throw new CommandException("You can't summon me as you're not in a voice call");
-
-        // Check to see if the bot is connected
-        if (!ctx.getGuild().getAudioManager().isConnected()) {
-            AudioUtils.hasPermissions(ctx.getMe(), ctx.getAuthor().getVoiceState().getChannel());
-            audioGuildManager.joinChannel(ctx.getGuild(), ctx.getAuthor().getVoiceState().getChannel());
-            audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong()); // Calling this to generate an AudioGuild
-        }
-
-        // Check to make sure the User and Bot is in the same channel
-        if (!AudioUtils.userInSameChannel(ctx))
-            throw new CommandException("You can't ask me to play anything because we're not in the same voice channel. Please use `summon` if you want me to move.");
-
-        // Update the audio guild
-        audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong()).setLastTextChannel(ctx.getChannel().getIdLong());
+        // Handle summon checks
+        AudioUtils.runSummon(audioGuildManager, ctx);
 
         // Setup the Query
         String url = ctx.getArgsStripped().get(0);
@@ -393,11 +377,11 @@ public class Music extends Cog {
 
             output.append(
                     String.format(
-                        "__%s. %s__\nRequested by: %s\nLength: %s\n\n",
-                        count,
-                        trackRequest.audioTrack.getInfo().title,
-                        getYui().getJda().getUserById(trackRequest.requestAuthor).getAsMention(),
-                        AudioUtils.durationToString(trackRequest.audioTrack.getDuration())
+                            "__%s. %s__\nRequested by: %s\nLength: %s\n\n",
+                            count,
+                            trackRequest.audioTrack.getInfo().title,
+                            getYui().getJda().getUserById(trackRequest.requestAuthor).getAsMention(),
+                            AudioUtils.durationToString(trackRequest.audioTrack.getDuration())
                     )
             );
             count++;

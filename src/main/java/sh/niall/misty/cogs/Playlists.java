@@ -13,17 +13,21 @@ import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import sh.niall.misty.Misty;
+import sh.niall.misty.audio.AudioGuild;
 import sh.niall.misty.audio.AudioGuildManager;
+import sh.niall.misty.audio.TrackRequest;
 import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
 import sh.niall.misty.playlists.Playlist;
 import sh.niall.misty.playlists.PlaylistUtils;
 import sh.niall.misty.playlists.SongCache;
+import sh.niall.misty.playlists.containers.PlaylistLookupContainer;
 import sh.niall.misty.playlists.containers.PlaylistSong;
 import sh.niall.misty.playlists.containers.PlaylistUrlsContainer;
 import sh.niall.misty.playlists.enums.Permission;
 import sh.niall.misty.utils.audio.AudioUtils;
 import sh.niall.misty.utils.cogs.MistyCog;
+import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.Menu;
 import sh.niall.misty.utils.ui.Paginator;
 import sh.niall.yui.commands.Context;
@@ -187,7 +191,6 @@ public class Playlists extends MistyCog {
                     case 1:
                         if (playlist.friendlyName.equals(newMessage))
                             throw new CommandException("The old and new playlist names match!");
-                        // TODO Check string isn't same as old in embed
                         PlaylistUtils.validatePlaylistName(newMessage);
                         embedBuilder.addField("Old Name:", playlist.friendlyName, true);
                         embedBuilder.addField("New Name:", newMessage, true);
@@ -338,7 +341,8 @@ public class Playlists extends MistyCog {
         Set<String> toAdd = new HashSet<>();
         for (Url url : results.songUrls) {
             String domain = url.getHost().toLowerCase().replace("www.", "");
-            if (url.getPath().length() > 1)
+            System.out.println(url.getPath());
+            if (url.getPath().length() <= 1)
                 throw new CommandException("Invalid URL provided: " + url.getFullUrl());
 
             if (domain.equals("youtu.be")) {
@@ -366,7 +370,7 @@ public class Playlists extends MistyCog {
         }
 
         // Get the keys and add the songs (duplicates ignored) and compare the size
-        Set<String> songListSet = playlist.songList.keySet();
+        Set<String> songListSet = new HashSet<>(playlist.songList.keySet());
         songListSet.addAll(toAdd);
         if (songListSet.size() > playlistSongLimit)
             throw new CommandException("There's not enough room in the playlist to add `" + toAdd.size() + "` songs!");
@@ -382,9 +386,16 @@ public class Playlists extends MistyCog {
         }
 
         // Confirm to save
-        if (sendConfirmation(ctx, String.format("Are you sure you want to add %s songs to %s?", added, playlist.friendlyName))) {
+        if (sendConfirmation(ctx, String.format("Are you sure you want to add %s %s to %s?", added, Helper.singularPlural(added, "song", "songs"), playlist.friendlyName))) {
             playlist.save();
-            ctx.send(String.format("Found %s songs and added %s songs which brings the playlist total to %s songs!", toAdd.size(), added, playlist.songList.size()));
+            ctx.send(
+                    String.format(
+                            "Found %s %s and added %s %s which brings the playlist total to %s %s!",
+                            toAdd.size(), Helper.singularPlural(toAdd.size(), "song", "songs"),
+                            added, Helper.singularPlural(added, "song", "songs"),
+                            playlist.songList.size(), Helper.singularPlural(playlist.songList.size(), "song", "songs")
+                    )
+            );
         } else {
             ctx.send("Okay, I won't update the playlist!");
         }
@@ -421,28 +432,13 @@ public class Playlists extends MistyCog {
 
     @GroupCommand(group = "playlist", name = "list", aliases = {"l"})
     public void _commandList(Context ctx) throws CommandException, AudioException, MistyException, IOException {
-        long targetId = ctx.getAuthor().getIdLong();
-        String playlistName = "";
-        List<String> args = new ArrayList<>(ctx.getArgsStripped());
+        PlaylistLookupContainer result = PlaylistUtils.getTargetAndName(ctx);
+        List<EmbedBuilder> embedList = new ArrayList<>();
 
-        // First locate the target
-        if (!args.isEmpty()) {
-            String possibleTarget = args.get(0).replace("<@!", "!").replace("<@", "").replace(">", "");
-            if (15 <= possibleTarget.length() && possibleTarget.length() <= 21 && possibleTarget.matches("\\d+")) {
-                targetId = Long.parseLong(possibleTarget);
-                args.remove(0);
-            }
-        }
-
-        // Now see if we were given a playlist name
-        if (!args.isEmpty()) {
-            playlistName = String.join(" ", args);
-        }
-
-        if (playlistName.isEmpty()) { // List the users playlists
+        if (result.playlistName.isEmpty()) { // List the users playlists
             // Get the list of playlists
             List<Playlist> playlists = new ArrayList<>();
-            for (Document document : db.find(Filters.or(Filters.eq("author", targetId), Filters.eq("editors", targetId)))) {
+            for (Document document : db.find(Filters.or(Filters.eq("author", result.targetId), Filters.eq("editors", result.targetId)))) {
                 Playlist playlist = new Playlist(db, document);
                 Permission permission = playlist.getUserPermission(ctx.getAuthor().getIdLong());
                 if (permission.equals(Permission.VIEWER) || permission.equals(Permission.EDITOR) || permission.equals(Permission.OWNER))
@@ -451,83 +447,115 @@ public class Playlists extends MistyCog {
 
             // Ensure we found some
             if (playlists.isEmpty())
-                throw new CommandException(String.format("I found no playlists by the user %s", PlaylistUtils.getTargetName(ctx, targetId)));
+                throw new CommandException(String.format("I found no playlists by the user %s", PlaylistUtils.getTargetName(ctx, result.targetId)));
 
-            // Split playlists into chunks of 5
-            List<List<Playlist>> playlistList2D = new ArrayList<>();
-            final AtomicInteger counter = new AtomicInteger();
-            for (Playlist playlist : playlists) {
-                if (counter.getAndIncrement() % 5 == 0) {
-                    playlistList2D.add(new ArrayList<>());
+            while (!playlists.isEmpty()) {
+                // Create the page
+                int added = 0;
+                EmbedBuilder embedBuilder = new EmbedBuilder();
+                embedBuilder.setTitle(PlaylistUtils.getTargetName(ctx, result.targetId) + " Playlists!");
+                embedBuilder.setDescription("Showing playlists they own and can edit.");
+                embedBuilder.setColor(Color.GREEN);
+
+                // Add the playlists
+                while (!playlists.isEmpty() && added < 5) {
+                    added++;
+                    Playlist playlist = playlists.remove(0);
+                    String builder = playlist.description + "\n" +
+                            "Songs: " + playlist.songList.size() + "\n" +
+                            "Plays: " + playlist.plays + "\n" +
+                            "Author: " + PlaylistUtils.getTargetName(ctx, playlist.author) + "\n" +
+                            "Editors: " + playlist.editors.size() + "\n" +
+                            "Role: " + StringUtils.capitalize(playlist.getUserPermission(result.targetId).toString().toLowerCase()) + "\n";
+                    embedBuilder.addField(String.format("**%s**", playlist.friendlyName), builder, true);
                 }
-                playlistList2D.get(playlistList2D.size() - 1).add(playlist);
+
+                // Add to the list of pages
+                embedList.add(embedBuilder);
             }
-
-            // Create the embed
-            List<MessageEmbed> embedList = new ArrayList<>();
-            for (List<Playlist> playlistList : playlistList2D) {
-                EmbedBuilder embedBuilder = new EmbedBuilder()
-                        .setTitle(PlaylistUtils.getTargetName(ctx, targetId) + " Playlist list!")
-                        .setDescription("Showing playlists they own and can edit.")
-                        .setColor(Color.GREEN);
-
-                for (Playlist playlist : playlistList) {
-                    StringBuilder builder = new StringBuilder();
-                    if (!playlist.description.isEmpty())
-                        builder.append(playlist.description).append("\n");
-
-                    builder.append("Author: ").append(PlaylistUtils.getTargetName(ctx, playlist.author)).append("\n");
-                    builder.append("Plays: ").append(playlist.plays).append("\n");
-                    builder.append("Songs: ").append(playlist.songList.size()).append("\n");
-                    builder.append("Editors: ").append(playlist.editors.size()).append("\n");
-                    builder.append("Role: ").append(StringUtils.capitalize(playlist.getUserPermission(targetId).toString())).append("\n");
-                    embedBuilder.addField(playlist.friendlyName, builder.toString(), true);
-                }
-                embedList.add(embedBuilder.build());
-            }
-            Paginator paginator = new Paginator(getYui(), (TextChannel) ctx.getChannel(), embedList, 60);
-            paginator.run();
         } else { // Display the specified playlist
-            Playlist playlist = new Playlist(db, targetId, playlistName);
+            // Get the playlist
+            Playlist playlist = new Playlist(db, result.targetId, result.playlistName, Playlist.generateSearchName(result.playlistName));
             Permission permission = playlist.getUserPermission(ctx.getAuthor().getIdLong());
             if (permission.equals(Permission.NONE))
                 throw new CommandException("You are not allowed to view this playlist!");
 
-            // Split songs into chunks of 10
-            List<List<String>> songUrls2D = new ArrayList<>();
-            final AtomicInteger counter = new AtomicInteger();
-            for (String song : playlist.songList.keySet()) {
-                if (counter.getAndIncrement() % 10 == 0) {
-                    songUrls2D.add(new ArrayList<>());
-                }
-                songUrls2D.get(songUrls2D.size() - 1).add(song);
-            }
+            List<String> urls = new ArrayList<>(playlist.songList.keySet());
+            if (urls.isEmpty())
+                throw new CommandException(String.format("Playlist %s has no songs!", playlist.friendlyName));
 
-            // Create Embeds
-            List<MessageEmbed> embedList = new ArrayList<>();
-            for (List<String> songList : songUrls2D) {
-                EmbedBuilder embedBuilder = new EmbedBuilder()
-                        .setTitle(playlist.friendlyName)
-                        .setDescription(playlist.description)
-                        .setColor(Color.GREEN)
-                        .setThumbnail(playlist.image);
+            while (!urls.isEmpty()) {
 
-                for (String song : songList) {
-                    PlaylistSong playlistSong = playlist.songList.get(song);
-                    AudioTrack audioTrack = songCache.getTrack(ctx.getGuild(), song);
+                int added = 0;
+                EmbedBuilder embedBuilder = new EmbedBuilder();
+                embedBuilder.setTitle(String.format("**%s**", playlist.friendlyName));
+                embedBuilder.setDescription(playlist.description);
+                embedBuilder.setColor(Color.PINK);
+                if (!playlist.image.isEmpty())
+                    embedBuilder.setThumbnail(playlist.image);
+                if (!PlaylistUtils.targetDoesntExist(ctx, playlist.author))
+                    embedBuilder.setAuthor(PlaylistUtils.getTargetName(ctx, playlist.author), null, ctx.getBot().getUserById(playlist.author).getEffectiveAvatarUrl());
+
+                while (!urls.isEmpty() && added < 6) {
+                    added++;
+                    String url = urls.remove(0);
+                    PlaylistSong playlistSong = playlist.songList.get(url);
+                    AudioTrack audioTrack = songCache.getTrack(ctx.getGuild(), url);
                     String builder = "Duration: " + AudioUtils.durationToString(audioTrack.getInfo().length) + "\n" +
                             "Added By: " + PlaylistUtils.getTargetName(ctx, playlistSong.addedBy) + "\n" +
-                            "Added: " + Instant.ofEpochSecond(playlistSong.addedTimestamp).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("dd MMMM yyyy")) + "\n" +
-                            "Url: " + song;
-                    embedBuilder.addField(playlist.friendlyName, builder, true);
+                            "Added: " + Instant.ofEpochSecond(playlistSong.addedTimestamp).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("dd MMM yyyy")) + "\n" +
+                            "Url: " + url;
+                    embedBuilder.addField(audioTrack.getInfo().title, builder, true);
                 }
-                embedList.add(embedBuilder.build());
+                embedList.add(embedBuilder);
             }
-            Paginator paginator = new Paginator(getYui(), (TextChannel) ctx.getChannel(), embedList, 60);
-            paginator.run();
         }
 
+        // Add page numbers
+        List<MessageEmbed> output = new ArrayList<>();
+        int page = 1;
+        int total = embedList.size();
+        for (EmbedBuilder embedBuilder : embedList) {
+            embedBuilder.setFooter(String.format("Page %s of %s", page, total));
+            output.add(embedBuilder.build());
+            page++;
+        }
 
+        Paginator paginator = new Paginator(getYui(), (TextChannel) ctx.getChannel(), output, 60);
+        paginator.run();
+    }
+
+    @GroupCommand(group = "playlist", name = "play", aliases = {"p"})
+    public void _commandPlay(Context ctx) throws CommandException, InterruptedException, AudioException, MistyException, IOException {
+        // Handle summon checks
+        AudioUtils.runSummon(audioGuildManager, ctx);
+
+        // Understand the request
+        PlaylistLookupContainer result = PlaylistUtils.getTargetAndName(ctx);
+        if (result.playlistName.isEmpty())
+            throw new CommandException("Please provide a playlist name to play!");
+
+        // Find the playlist (throws command exception if it can't find)
+        Playlist playlist = new Playlist(db, result.targetId, result.playlistName, Playlist.generateSearchName(result.playlistName));
+
+        // Get the audio guild and check the queue has enough room
+        AudioGuild audioGuild = audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong());
+        Set<String> songList = playlist.songList.keySet();
+        if (audioGuild.getQueue().size() + songList.size() > AudioGuild.maxSongsInQueue)
+            throw new CommandException("Can't add playlist as there's not enough room in the queue! Please clear the queue or try again later.");
+
+        // Add the songs to the queue
+        for (String url : songList) {
+            AudioTrack audioTrack = songCache.getTrack(ctx.getGuild(), url);
+            audioGuild.addToQueue(new TrackRequest(audioTrack, ctx.getAuthor().getIdLong()));
+        }
+
+        // Play the music
+        if (audioGuild.getAudioPlayer().getPlayingTrack() == null)
+            audioGuild.play();
+
+        // Inform the invoker
+        ctx.send(String.format("Added `%s` %s from the `%s` playlist to the queue!", songList.size(), Helper.singularPlural(songList.size(), "song", "songs"), playlist.friendlyName));
     }
 
     private String getNextMessage(Context ctx) throws WaiterException {

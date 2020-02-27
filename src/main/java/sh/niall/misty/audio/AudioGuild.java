@@ -8,7 +8,6 @@ import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
-import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.MessageChannel;
@@ -43,7 +42,7 @@ public class AudioGuild extends AudioEventAdapter {
     private SendHandler sendHandler;
 
     // Static
-    static int maxSongsInQueue = 300;
+    public static int maxSongsInQueue = 300;
 
     public AudioGuild(Yui yui, long guildId, AudioPlayerManager audioPlayerManager) {
         // Setup some basics
@@ -95,7 +94,9 @@ public class AudioGuild extends AudioEventAdapter {
         this.shuffling = shuffling;
     }
 
-    public boolean isPaused() { return audioPlayer.isPaused(); }
+    public boolean isPaused() {
+        return audioPlayer.isPaused();
+    }
 
     public SendHandler getSendHandler() {
         return sendHandler;
@@ -111,6 +112,7 @@ public class AudioGuild extends AudioEventAdapter {
 
     /**
      * Adds a new song to the end of the queue
+     *
      * @param trackRequest The song to add to the queue
      */
     public void addToQueue(TrackRequest trackRequest) throws CommandException {
@@ -121,6 +123,7 @@ public class AudioGuild extends AudioEventAdapter {
 
     /**
      * Gets the current queue
+     *
      * @return The queue of tracks
      */
     public List<TrackRequest> getQueue() {
@@ -129,6 +132,7 @@ public class AudioGuild extends AudioEventAdapter {
 
     /**
      * Removes a song from the queue
+     *
      * @param value The song to remove
      * @throws AudioException Thrown if the song does not exist.
      */
@@ -175,6 +179,7 @@ public class AudioGuild extends AudioEventAdapter {
 
     /**
      * Skips to the specified song
+     *
      * @param value The index of the song to skip to
      * @throws AudioException Thrown if Looping is enabled
      */
@@ -267,6 +272,7 @@ public class AudioGuild extends AudioEventAdapter {
 
     /**
      * Gets a preview image of the currently playing song
+     *
      * @return The URL to the image
      */
     public String getArtwork() {

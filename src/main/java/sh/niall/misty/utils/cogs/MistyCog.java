@@ -4,13 +4,10 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
-import sh.niall.yui.Yui;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.WaiterException;
-import sh.niall.yui.waiter.EventWaiter;
-import sh.niall.yui.waiter.interfaces.EventCheck;
 
 import java.awt.*;
 import java.util.concurrent.TimeUnit;
