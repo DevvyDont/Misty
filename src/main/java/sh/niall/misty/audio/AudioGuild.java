@@ -42,6 +42,9 @@ public class AudioGuild extends AudioEventAdapter {
     private AudioPlayer audioPlayer;
     private SendHandler sendHandler;
 
+    // Static
+    static int maxSongsInQueue = 300;
+
     public AudioGuild(Yui yui, long guildId, AudioPlayerManager audioPlayerManager) {
         // Setup some basics
         this.yui = yui;
@@ -110,7 +113,9 @@ public class AudioGuild extends AudioEventAdapter {
      * Adds a new song to the end of the queue
      * @param trackRequest The song to add to the queue
      */
-    public void addToQueue(TrackRequest trackRequest) {
+    public void addToQueue(TrackRequest trackRequest) throws CommandException {
+        if (trackQueue.size() == maxSongsInQueue)
+            throw new CommandException("The queue is currently full! Please try again after a few songs");
         trackQueue.add(trackRequest);
     }
 

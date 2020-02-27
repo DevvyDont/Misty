@@ -7,17 +7,25 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
-import org.bson.types.ObjectId;
 import sh.niall.misty.Misty;
 import sh.niall.misty.audio.AudioGuildManager;
 import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
+import sh.niall.misty.playlists.Playlist;
 import sh.niall.misty.playlists.PlaylistUtils;
 import sh.niall.misty.playlists.SongCache;
+import sh.niall.misty.playlists.containers.PlaylistSong;
+import sh.niall.misty.playlists.containers.PlaylistUrlsContainer;
+import sh.niall.misty.playlists.enums.Permission;
+import sh.niall.misty.utils.audio.AudioUtils;
 import sh.niall.misty.utils.cogs.MistyCog;
 import sh.niall.misty.utils.ui.Menu;
+import sh.niall.misty.utils.ui.Paginator;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.commands.interfaces.Group;
 import sh.niall.yui.commands.interfaces.GroupCommand;
@@ -26,11 +34,11 @@ import sh.niall.yui.exceptions.WaiterException;
 
 import java.awt.*;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashSet;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -59,75 +67,46 @@ public class Playlists extends MistyCog {
     @GroupCommand(group = "playlist", name = "create", aliases = {"c"})
     public void _commandCreate(Context ctx) throws CommandException {
         // Get all of the users playlists, ensure they have less than 10
-        if (db.count(Filters.eq("author", ctx.getAuthor().getIdLong())) >= maxPlaylists)
+        if (this.db.count(Filters.eq("author", ctx.getAuthor().getIdLong())) >= maxPlaylists)
             throw new CommandException("You can only have a total of " + maxPlaylists + " playlists!");
 
-        // Merge the name
-        String name = String.join(" ", ctx.getArgsStripped());
-        String lowerName = name.trim().toLowerCase();
-
         // Validate the name
-        PlaylistUtils.validateName(name);
+        String friendlyName = String.join(" ", ctx.getArgsStripped());
+        PlaylistUtils.validatePlaylistName(friendlyName);
 
-        // Check the playlist doesn't already exist
-        if (db.find(Filters.eq("searchName", lowerName)).first() != null)
-            throw new CommandException("Playlist " + name + " already exits");
-
-        // Create the playlist
-        Document document = new Document();
-        document.append("author", ctx.getAuthor().getIdLong());
-        document.append("friendlyName", name);
-        document.append("searchName", lowerName);
-        document.append("image", "");
-        document.append("desc", "");
-        document.append("editors", new ArrayList<Long>());
-        document.append("plays", 0);
-        document.append("songList", new ArrayList<String>());
-        db.insertOne(document);
+        // Make the playlist
+        new Playlist(this.db, ctx.getAuthor().getIdLong(), friendlyName).save();
 
         // Inform the user
-        ctx.send("Playlist " + name + " created!");
+        ctx.send("Playlist " + friendlyName + " created!");
     }
 
     @GroupCommand(group = "playlist", name = "delete", aliases = {"d"})
     public void _commandDelete(Context ctx) throws CommandException, WaiterException {
-        // Get the playlist name
-        String name = String.join(" ", ctx.getArgsStripped());
-        String lowerName = name.trim().toLowerCase();
-
-        // Validate the playlist name
-        PlaylistUtils.validateName(name);
-
-        // Search for it
-        Document document = db.find(Filters.and(
-                Filters.eq("author", ctx.getAuthor().getIdLong()),
-                Filters.eq("searchName", lowerName)
-        )).first();
-        if (document == null)
-            throw new CommandException("Can't delete " + name + " as it doesn't exist!");
+        // Get the playlist
+        String friendlyName = String.join(" ", ctx.getArgsStripped());
+        Playlist playlist = new Playlist(this.db, ctx.getAuthor().getIdLong(), friendlyName, Playlist.generateSearchName(friendlyName));
 
         // Convert editors to real names
-        List<String> editors = new ArrayList<>();
-        for (Long editor : (List<Long>) document.get("editors")) {
-            editors.add(PlaylistUtils.getName(ctx, editor));
+        StringBuilder stringBuilder = new StringBuilder();
+        for (Long editor : playlist.editors) {
+            stringBuilder.append(PlaylistUtils.getTargetName(ctx, editor)).append("\n");
         }
 
         // Validate they want to delete the playlist
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Playlist delete confirm!");
-        embedBuilder.setDescription("Are you sure you want to delete the playlist " + name);
+        embedBuilder.setDescription("Are you sure you want to delete the playlist " + friendlyName);
         embedBuilder.setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
-        embedBuilder.addField("Songs:", String.valueOf(((List<String>) document.get("songList")).size()), true);
-        if (!editors.isEmpty())
-            embedBuilder.addField("Editors:", String.join("\n", editors), true);
-        embedBuilder.addField("Plays:", String.valueOf(document.getInteger("plays")), true);
-        boolean result = sendConfirmation(ctx, embedBuilder.build());
+        embedBuilder.addField("Songs:", String.valueOf(playlist.songList.size()), true);
+        if (stringBuilder.length() != 0)
+            embedBuilder.addField("Editors:", stringBuilder.toString(), true);
+        embedBuilder.addField("Plays:", String.valueOf(playlist.plays), true);
 
         // Handle the result
-        if (result) {
-            // If they said yes, delete it!
-            db.deleteOne(Filters.eq("_id", document.get("_id", ObjectId.class)));
-            ctx.send("Playlist `" + name + "` deleted!");
+        if (sendConfirmation(ctx, embedBuilder.build())) {
+            playlist.delete();
+            ctx.send("Playlist `" + friendlyName + "` deleted!");
         } else {
             ctx.send("Playlist delete canceled");
         }
@@ -135,23 +114,14 @@ public class Playlists extends MistyCog {
 
     @GroupCommand(group = "playlist", name = "edit", aliases = {"e"})
     public void _commandEdit(Context ctx) throws CommandException, WaiterException {
-        // Get the playlist name
-        String name = String.join(" ", ctx.getArgsStripped());
-        String lowerName = name.trim().toLowerCase();
-
-        // Validate the playlist name
-        PlaylistUtils.validateName(name);
-
-        // Get the playlist from the database
-        Document document = db.find(Filters.and(Filters.eq("author", ctx.getAuthor().getIdLong()), Filters.eq("searchName", lowerName))).first();
-        if (document == null)
-            throw new CommandException("Playlist " + name + " does not exist!");
+        // Get the playlist
+        String friendlyName = String.join(" ", ctx.getArgsStripped());
+        Playlist playlist = new Playlist(this.db, ctx.getAuthor().getIdLong(), friendlyName, Playlist.generateSearchName(friendlyName));
 
         // Setup the update information
-        Document newDocument = new Document();
         EmbedBuilder embedBuilder = new EmbedBuilder()
                 .setTitle("Edit Conformation")
-                .setDescription("Are you sure you want to make these changes to the playlist " + document.getString("friendlyName") + " ?")
+                .setDescription("Are you sure you want to make these changes to the playlist " + friendlyName + " ?")
                 .setColor(Color.ORANGE)
                 .setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
 
@@ -163,6 +133,7 @@ public class Playlists extends MistyCog {
                         "Playlist Name",
                         "Playlist Description",
                         "Playlist Image",
+                        "Playlist Privacy",
                         "Add Editor",
                         "Remove Editor",
                         "Change Ownership",
@@ -170,29 +141,37 @@ public class Playlists extends MistyCog {
         );
 
         // Since all the other logic is done in a loop, handle the prompts first
-        if (menuOption == 1)
-            ctx.send("What would you like to rename the playlist to?");
-        else if (menuOption == 2)
-            ctx.send("What would you like the playlist description to be?\n(Reply with `clear` to remove the current description)");
-        else if (menuOption == 3)
-            ctx.send("What would you like the playlist image to be?\n(Reply with `clear` to remove the current image)");
-        else if (menuOption == 4) {
-            // Validate we can do this
-            if (((List<Long>) document.get("editors")).size() >= maxEditors)
-                throw new CommandException("You can't have more than 3 editors! Please remove an editor from the playlist first.");
-            ctx.send("Who would you like to add to the playlist editor list?");
-        } else if (menuOption == 5) {
-            // Validate we have editors
-            if (((List<Long>) document.get("editors")).size() == 0)
-                throw new CommandException("You don't have any playlist editors, so you can't remove any!");
-            ctx.send("What would you like the playlist description to be?\n(Reply with `clear` to remove the current description)");
-        } else if (menuOption == 6)
-            ctx.send("Who would you like the new owner to be?");
-        else
-            throw new CommandException("Unknown menu error occurred!");
+        switch (menuOption) {
+            case 1: // Rename
+                ctx.send("What would you like to rename the playlist to?");
+                break;
+            case 2: // Description
+                ctx.send("What would you like the playlist description to be?\n(Reply with `clear` to remove the current description)");
+                break;
+            case 3: // Image
+                ctx.send("What would you like the playlist image to be?\n(Reply with `clear` to remove the current image)");
+                break;
+            case 4: // Privacy
+                ctx.send("Would you like the playlist to be private? Making a playlist private means only editors and yourself will be able to play it. yes/no");
+                break;
+            case 5: // Add Editor
+                if (playlist.editors.size() >= maxEditors)
+                    throw new CommandException("You can't have more than " + maxEditors + " editors! Please remove an editor from the playlist first.");
+                ctx.send("Who would you like to add to the playlist editor list?");
+                break;
+            case 6: // Remove Editor
+                if (playlist.editors.isEmpty())
+                    throw new CommandException("You don't have any playlist editors, so you can't remove any!");
+                ctx.send("Who would you like to remove from the playlist editor list?");
+                break;
+            case 7: // Change Ownership
+                ctx.send("Who would you like the new owner to be?");
+                break;
+        }
 
         // Using Atomic to keep track of how many iterations
         AtomicInteger attempts = new AtomicInteger(0);
+        inputLoop:
         while (true) {
             if (attempts.incrementAndGet() == 4)
                 throw new CommandException("Exiting edit, you've failed too many attempts.");
@@ -201,195 +180,143 @@ public class Playlists extends MistyCog {
             String newMessage = getNextMessage(ctx);
             if (newMessage == null)
                 throw new CommandException("Exiting edit, you ran out of time!");
+            String trimmed = newMessage.trim();
 
-            if (menuOption == 1) {
-                // First up, renaming
-                // Validate the name and loop again if it isn't valid
-                try {
-                    if (document.getString("friendlyName").equals(newMessage))
-                        throw new CommandException("Old and new name matches!");
+            try {
+                switch (menuOption) {
+                    case 1:
+                        if (playlist.friendlyName.equals(newMessage))
+                            throw new CommandException("The old and new playlist names match!");
+                        // TODO Check string isn't same as old in embed
+                        PlaylistUtils.validatePlaylistName(newMessage);
+                        embedBuilder.addField("Old Name:", playlist.friendlyName, true);
+                        embedBuilder.addField("New Name:", newMessage, true);
+                        playlist.friendlyName = newMessage;
+                        playlist.searchName = Playlist.generateSearchName(newMessage);
+                        break inputLoop;
+                    case 2:
+                        if (trimmed.toLowerCase().equals("clear"))
+                            trimmed = "";
+                        else
+                            PlaylistUtils.validatePlaylistDescription(trimmed);
 
-                    PlaylistUtils.validateName(newMessage);
-                } catch (CommandException error) {
-                    ctx.send("That won't work, please try again!\n`" + error.getMessage() + "`");
-                    continue;
-                }
+                        embedBuilder.addField("Old Description:", playlist.description, false);
+                        embedBuilder.addField("New Description:", trimmed, false);
+                        playlist.description = trimmed;
+                        break inputLoop;
+                    case 3:
+                        String url;
+                        if (trimmed.toLowerCase().equals("clear")) {
+                            url = "";
+                            embedBuilder.addField("New Image:", "You've decided to remove the current image. Are you sure?", true);
 
-                // Input was valid, add to the conformation and update the document
-                embedBuilder.addField("Old Name:", document.getString("friendlyName"), true);
-                embedBuilder.addField("New Name:", newMessage, true);
-                newDocument.append("friendlyName", newMessage);
-                newDocument.append("searchName", newMessage.toLowerCase());
-                break;
-
-            } else if (menuOption == 2) {
-                //  Next up descriptions
-                // The user can provide clear here, so validate if they don't
-                if (newMessage.toLowerCase().equals("clear"))
-                    newMessage = "";
-                else {
-                    try {
-                        if (document.getString("desc").equals(newMessage))
-                            throw new CommandException("Old and new description match!");
-
-                        if (!newMessage.matches("^[a-zA-Z0-9 ]*$"))
-                            throw new CommandException("Playlist name must only contain alphanumeric characters (a-Z & 0-9)!");
-
-                        if (!name.equals(name.replaceAll(" +", " ")))
-                            throw new CommandException("Playlist descriptions can't have multiple spaces per word!");
-
-                        if (name.startsWith(" "))
-                            throw new CommandException("Playlist description can't start with a space!");
-
-                        if (name.length() > 150)
-                            throw new CommandException("Playlist descriptions can't be longer than 150 characters");
-
-                    } catch (CommandException error) {
-                        ctx.send("That won't work, please try again!\n`" + error.getMessage() + "`");
-                        continue;
-                    }
-                }
-
-                // Input was valid, add to the conformation and update the document
-                embedBuilder.addField("Old Description:", document.getString("desc"), false);
-                embedBuilder.addField("New Description:", newMessage, false);
-                newDocument.append("desc", newMessage);
-                break;
-            } else if (menuOption == 3) {
-                //  Next up Image
-                // The user can provide clear here, so validate if they don't
-                if (newMessage.toLowerCase().equals("clear"))
-                    newMessage = "";
-                else {
-                    try {
-                        if (document.getString("image").equals(newMessage))
-                            throw new CommandException("Old and new images match!");
-
-                        try {
-                            new URL(newMessage);
-                        } catch (MalformedURLException error) {
-                            throw new CommandException("URL isn't valid!");
+                        } else {
+                            List<Url> urls = new UrlDetector(trimmed, UrlDetectorOptions.Default).detect();
+                            if (urls.isEmpty())
+                                throw new CommandException("Provided URL is invalid");
+                            url = urls.get(0).getFullUrl();
+                            String[] splits = url.split("\\.");
+                            String suffix = splits[splits.length - 1];
+                            if (!(suffix.equals("png") || suffix.equals("jpg") || suffix.equals("jpeg") || suffix.equals("gif")))
+                                throw new CommandException("Playlist images must be a png, jpeg, jpg or gif");
+                            embedBuilder.addField("New Image:", "Please verify the image is displaying correctly.", true);
+                            embedBuilder.setThumbnail(newMessage);
                         }
-                        String[] splits = newMessage.split("\\.");
-                        String suffix = splits[splits.length - 1];
-                        if (!(suffix.equals("png") || suffix.equals("jpg") || suffix.equals("jpeg") || suffix.equals("gif")))
-                            throw new CommandException("Playlist images must be a png, jpeg, jpg or gif");
+                        playlist.image = url;
+                        break inputLoop;
+                    case 4:
+                        Set<String> yes = Set.of("true", "yes", "ya", "y", "ye", "ok");
+                        Set<String> no = Set.of("false", "no", "n", "nope");
+                        String choice = trimmed.toLowerCase();
+                        if (yes.contains(choice)) {
+                            playlist.isPrivate = true;
+                            embedBuilder.addField("Playlist Privacy:", "You have decided to make this playlist private", true);
+                            break inputLoop;
+                        } else if (no.contains(choice)) {
+                            playlist.isPrivate = false;
+                            embedBuilder.addField("Playlist Privacy:", "You have decided to make this playlist public", true);
+                            break inputLoop;
+                        }
+                        throw new CommandException("Invalid choice given.");
+                    case 5:
+                        String newEditor = trimmed.split(" ")[0].replace("<@", "").replace("!", "").replace(">", "");
+                        if (!newEditor.matches("\\d+"))
+                            throw new CommandException("Invalid user! Please provide a valid user to add as an editor.");
 
-                    } catch (CommandException error) {
-                        ctx.send("That won't work, please try again!\n`" + error.getMessage() + "`");
-                        continue;
-                    }
+                        long newTarget = Long.parseLong(newEditor);
+
+                        if (playlist.editors.contains(newTarget))
+                            throw new CommandException("They're already an editor!");
+
+                        if (PlaylistUtils.targetDoesntExist(ctx, newTarget))
+                            throw new CommandException("I don't know who that is! Please make sure the editor you're trying to add is in this server.");
+
+                        playlist.editors.add(newTarget);
+                        embedBuilder.addField("New editor:", PlaylistUtils.getTargetName(ctx, newTarget), false);
+                        embedBuilder.addField("WARNING:", "Editors can Add and Remove songs from a playlist. Please make sure you trust who you're adding.", false);
+                        embedBuilder.setColor(Color.RED);
+                        break inputLoop;
+                    case 6:
+                        String toRemove = trimmed.split(" ")[0].replace("<@", "").replace("!", "").replace(">", "");
+                        if (!toRemove.matches("\\d+"))
+                            throw new CommandException("Invalid user! Please provide a valid user to remove.");
+
+                        long removeTarget = Long.parseLong(toRemove);
+                        if (!playlist.editors.contains(removeTarget))
+                            throw new CommandException("They're not an editor for this playlist.");
+
+                        playlist.editors.remove(removeTarget);
+                        embedBuilder.addField("Removing editor:", PlaylistUtils.getTargetName(ctx, removeTarget), false);
+                        embedBuilder.setColor(Color.RED);
+                        break inputLoop;
+                    case 7:
+                        String newOwner = newMessage.split(" ")[0].replace("<@", "").replace("!", "").replace(">", "");
+                        if (!newOwner.matches("\\d+"))
+                            throw new CommandException("Invalid user! Please provide a valid user to change ownership to.");
+
+                        long newOwnerLong = Long.parseLong(newOwner);
+                        if (PlaylistUtils.targetDoesntExist(ctx, newOwnerLong))
+                            throw new CommandException("I don't know who that is! Please make sure the new owner is in this server.");
+
+                        if (db.count(Filters.eq("author", newOwnerLong)) >= maxPlaylists)
+                            throw new CommandException("They already have the maximum amount of playlists!");
+
+                        if (db.find(Filters.and(Filters.eq("author", newOwnerLong), Filters.eq("searchName", playlist.searchName))).first() != null)
+                            throw new CommandException("They already have a playlist called " + playlist.friendlyName);
+
+                        embedBuilder.addField("New Owner:", PlaylistUtils.getTargetName(ctx, newOwnerLong), false);
+                        embedBuilder.addField("WARNING:", "You will lose access to this playlist and the playlist editors will be reset!", false);
+                        embedBuilder.setColor(Color.RED);
+                        playlist.editors = new ArrayList<>();
+                        playlist.author = newOwnerLong;
+                        break inputLoop;
                 }
-
-                // Input was valid, add to the conformation and update the document
-                embedBuilder.addField("New Image:", "Please verify the image is displaying correctly.", true);
-                embedBuilder.setThumbnail(newMessage);
-                newDocument.append("image", newMessage);
-                break;
-            } else if (menuOption == 4) {
-                // Get the new editor
-                String newEditor = newMessage.split(" ")[0].replace("<@", "").replace("!", "").replace(">", "");
-                List<Long> editorList = (List<Long>) document.get("editors");
-                try {
-                    if (!newEditor.matches("\\d+"))
-                        throw new CommandException("Invalid user! Please provide a valid user to add as an editor.");
-
-                    long newEditorLong = Long.parseLong(newEditor);
-                    String newEditorName = PlaylistUtils.getName(ctx, newEditorLong);
-                    if (newEditorName.equals("Unknown User (" + newEditorLong + ")"))
-                        throw new CommandException("I don't know who that is! Please make sure the editor you're trying to add is in this server.");
-
-                    if (editorList.contains(newEditorLong))
-                        throw new CommandException(newEditorName + " is already an editor!");
-
-                    // Input was valid, add to the conformation and update the document
-                    editorList.add(newEditorLong);
-                    embedBuilder.addField("New editor:", newEditorName, false);
-                    embedBuilder.addField("WARNING:", "Editors can Add and Remove songs from a playlist. Please make sure you trust who you're adding.", false);
-                    embedBuilder.setColor(Color.RED);
-                    newDocument.append("editors", editorList);
-                    break;
-                } catch (CommandException error) {
-                    ctx.send("That won't work, please try again!\n`" + error.getMessage() + "`");
-                }
-            } else if (menuOption == 5) {
-                // Get the editor to remove
-                String editorToRemove = newMessage.split(" ")[0].replace("<@", "").replace("!", "").replace(">", "");
-                List<Long> editorList = (List<Long>) document.get("editors");
-                try {
-                    if (!editorToRemove.matches("\\d+"))
-                        throw new CommandException("Invalid user! Please provide a valid user to add as an editor.");
-
-                    long toRemoveLong = Long.parseLong(editorToRemove);
-                    String toRemoveName = PlaylistUtils.getName(ctx, toRemoveLong);
-
-                    if (!editorList.contains(toRemoveLong))
-                        throw new CommandException(toRemoveName + " is not an editor for this playlist.");
-
-                    // Input was valid, add to the conformation and update the document
-                    editorList.remove(toRemoveLong);
-                    embedBuilder.addField("Removing editor:", toRemoveName, false);
-                    embedBuilder.setColor(Color.RED);
-                    newDocument.append("editors", editorList);
-                    break;
-                } catch (CommandException error) {
-                    ctx.send("That won't work, please try again!\n`" + error.getMessage() + "`");
-                }
-            } else if (menuOption == 6) {
-                // Change ownership time.. Oh boy
-                String newOwner = newMessage.split(" ")[0].replace("<@", "").replace("!", "").replace(">", "");
-                try {
-                    if (!newOwner.matches("\\d+"))
-                        throw new CommandException("Invalid user! Please provide a valid user to change ownership to.");
-
-                    long newOwnerLong = Long.parseLong(newOwner);
-                    String newOwnerName = PlaylistUtils.getName(ctx, newOwnerLong);
-
-                    if (newOwnerName.equals("Unknown User (" + newOwnerLong + ")"))
-                        throw new CommandException("I don't know who that is! Please make sure the new owner is in this server.");
-
-                    if (db.count(Filters.eq("author", newOwnerLong)) >= maxPlaylists)
-                        throw new CommandException(newOwnerName + " already has the maximum amount of playlists!");
-
-                    if (db.find(Filters.and(Filters.eq("author", newOwnerLong), Filters.eq("searchName", document.getString("searchName")))).first() != null)
-                        throw new CommandException(newOwnerName + " already has a playlist called " + document.getString("friendlyName"));
-
-                    // Input was valid, add to the conformation and update the document
-                    embedBuilder.addField("New Owner:", newOwnerName, false);
-                    embedBuilder.addField("WARNING:", "You will lose access to this playlist and the playlist editors will be reset!", false);
-                    embedBuilder.setColor(Color.RED);
-                    newDocument.append("editors", new ArrayList<Long>());
-                    newDocument.append("author", newOwnerLong);
-
-                    // Unlike the others, we now want to ask the target if they agree
-                    EmbedBuilder targetEmbed = new EmbedBuilder()
-                            .setTitle("Playlist Transfer")
-                            .setDescription("Would you like to take ownership of the `" + document.getString("friendlyName") + "` playlist?")
-                            .setColor(Color.ORANGE)
-                            .setAuthor(newOwnerName, null, ctx.getBot().getUserById(newOwnerLong).getEffectiveAvatarUrl());
-
-                    boolean targetDecision;
-                    try {
-                        targetDecision = sendConfirmation(ctx, targetEmbed.build(), newOwnerLong);
-                    } catch (CommandException error) {
-                        ctx.send("Exiting edit, you ran out of time!");
-                        return;
-                    }
-
-                    if (!targetDecision) {
-                        ctx.send("Playlist edit canceled!");
-                        return;
-                    }
-                    break;
-                } catch (CommandException error) {
-                    ctx.send("That won't work, please try again!\n`" + error.getMessage() + "`");
-                }
+            } catch (CommandException error) {
+                ctx.send("That won't work, please try again!\n`" + error.getMessage() + "`");
             }
+        }
+
+        if (menuOption == 7) { // Validate new ownership with the new owner
+            EmbedBuilder targetEmbed = new EmbedBuilder()
+                    .setTitle("Playlist Transfer")
+                    .setDescription("Would you like to take ownership of the `" + playlist.friendlyName + "` playlist?")
+                    .setColor(Color.ORANGE)
+                    .setAuthor(PlaylistUtils.getTargetName(ctx, playlist.author), null, ctx.getBot().getUserById(playlist.author).getEffectiveAvatarUrl());
+
+            boolean targetDecision;
+            try {
+                targetDecision = sendConfirmation(ctx, targetEmbed.build(), playlist.author);
+            } catch (CommandException error) {
+                ctx.send("Transfer canceled! New owner took too long to respond.");
+                return;
+            }
+            if (!targetDecision)
+                throw new CommandException("Transfer canceled! The new owner declined!");
         }
 
         // Confirm and edit
         if (sendConfirmation(ctx, embedBuilder.build())) {
-            db.updateOne(Filters.eq("_id", document.get("_id", ObjectId.class)), new Document("$set", newDocument));
+            playlist.save();
             ctx.send("Playlist edited!");
         } else {
             ctx.send("Playlist edit canceled!");
@@ -397,91 +324,210 @@ public class Playlists extends MistyCog {
     }
 
     @GroupCommand(group = "playlist", name = "add", aliases = {"a"})
-    public void _commandAdd(Context ctx) throws CommandException, AudioException, MistyException, IOException {
-        if (ctx.getArgsStripped().size() < 2)
-            throw new CommandException("Please provide a playlist name and a url.");
-        List<String> args = new ArrayList<>(ctx.getArgsStripped());
+    public void _commandAdd(Context ctx) throws CommandException, AudioException, MistyException, IOException, WaiterException {
+        // First translate our arguments into data
+        PlaylistUrlsContainer results = PlaylistUtils.getPlaylistAndURLs(ctx);
+        Playlist playlist = new Playlist(db, results.targetId, results.playlistName, Playlist.generateSearchName(results.playlistName));
 
-        /*
-        * First let's work out our target
-        * Playlist names are limited in creation so we can just test for a long with 15-21 numbers
-        */
-        long targetId = ctx.getAuthor().getIdLong();
-        String possibleTarget = args.get(0).replace("<@", "").replace("!", "").replace(">", "");
-        if (15 <= possibleTarget.length() && possibleTarget.length() <= 21 && possibleTarget.matches("\\d+")) {
-            targetId = Long.parseLong(possibleTarget);
-            args.remove(0);
-        }
+        // Check invokers permissions
+        Permission permission = playlist.getUserPermission(ctx.getAuthor().getIdLong());
+        if (!(permission.equals(Permission.EDITOR) || permission.equals(Permission.OWNER)))
+            throw new CommandException("You don't have permission to add songs to this playlist!");
 
-        // Now we need to find the URLs
-        List<Url> detectedUrls = new UrlDetector(String.join(" ", args), UrlDetectorOptions.Default).detect();
-        if (detectedUrls.isEmpty())
-            throw new CommandException("Please provide a song url to add to the playlist");
+        // Add the URLS
+        Set<String> toAdd = new HashSet<>();
+        for (Url url : results.songUrls) {
+            String domain = url.getHost().toLowerCase().replace("www.", "");
+            if (url.getPath().length() > 1)
+                throw new CommandException("Invalid URL provided: " + url.getFullUrl());
 
-        // Store the first url location
-        System.out.println(args);
-        System.out.println(detectedUrls.get(0).getFullUrl());
-        int urlIndex = args.indexOf(detectedUrls.get(0).getFullUrl());
-
-        // Validate the URLS are valid
-        List<String> validUrls = new ArrayList<>();
-        for (Url url : detectedUrls) {
-            // Currently the only requirement is they're either a youtube/soundcloud song or playlist
-            String cleanUrl = url.getHost().trim().toLowerCase().replace("www.", "");
-            if (cleanUrl.equals("youtu.be") && url.getPath().length() > 1) {
-                validUrls.add("https://www.youtube.com/watch?v=" + url.getPath().substring(1));
+            if (domain.equals("youtu.be")) {
+                toAdd.add("https://www.youtube.com/watch?v=" + url.getPath().substring(1));
                 continue;
-            } else if (cleanUrl.equals("youtube.com")) {
-                validUrls.add(url.getFullUrl());
+            } else if (domain.equals("youtube.com") && Arrays.asList("/watch", "/playlist").contains(url.getPath().toLowerCase())) {
+                String playlistId = PlaylistUtils.getYoutubePlaylistId(url.getFullUrl());
+                if (playlistId != null) {
+                    for (AudioTrack audioTrack : songCache.getPlaylist(ctx.getGuild(), "https://www.youtube.com/playlist?list=" + playlistId))
+                        toAdd.add(audioTrack.getInfo().uri);
+                    continue;
+                }
+                String videoId = PlaylistUtils.getYoutubeVideoId(url.getFullUrl());
+                if (videoId != null) {
+                    toAdd.add("https://www.youtube.com/watch?v=" + videoId);
+                    continue;
+                }
+            } else if (domain.equals("soundcloud.com")) {
+                for (AudioTrack audioTrack : songCache.getPlaylist(ctx.getGuild(), url.getFullUrl())) {
+                    toAdd.add(audioTrack.getInfo().uri);
+                }
                 continue;
-            } else if (cleanUrl.equals("soundcloud.com")) {
-                // TODO: Soundcloud
             }
-            throw new CommandException("Unsupported URL given " + url.getFullUrl());
+            throw new CommandException("Invalid URL provided: " + url.getFullUrl());
         }
 
-        // Locate the playlist name
-        String playlistName = String.join(" ", args.subList(0, urlIndex));
-        String lowerName = playlistName.trim().toLowerCase();
-
-        // Find the playlist and validate the invoker has editor permissions
-        Document document = db.find(Filters.and(Filters.eq("author", targetId), Filters.eq("searchName", lowerName))).first();
-        if (document == null)
-            throw new CommandException("I can't find a playlist called `" + playlistName + "`!");
-        if (!(document.getLong("author") == ctx.getAuthor().getIdLong() ||((List<Long>) document.get("editors")).contains(ctx.getAuthor().getIdLong())))
-            throw new CommandException("You don't have permission to edit `" + playlistName + "`!");
-
-        // Now we have to validate our songs to add
-        List<String> toAdd = new ArrayList<>();
-        for (String url : validUrls) {
-            String lowerUrl = url.trim().toLowerCase();
-            if (lowerUrl.contains("youtube.com/")) {
-                // Now we have to detect if we have a playlist
-                if (lowerUrl.contains("list=")) {
-                    for (AudioTrack track : songCache.getPlaylist(ctx.getGuild(), url))
-                        toAdd.add(track.getInfo().uri);
-                } else if (lowerUrl.contains("watch?v="))
-                    toAdd.add(songCache.getTrack(ctx.getGuild(), url).getInfo().uri);
-            }
-        }
-        int foundSongs = toAdd.size();
-        toAdd = new ArrayList<>(new HashSet<>(toAdd));
-
-        // Now to add them
-        List<String> songList = (List<String>) document.get("songList");
-        int oldSize = songList.size();
-
-        if (toAdd.size() + oldSize > playlistSongLimit)
+        // Get the keys and add the songs (duplicates ignored) and compare the size
+        Set<String> songListSet = playlist.songList.keySet();
+        songListSet.addAll(toAdd);
+        if (songListSet.size() > playlistSongLimit)
             throw new CommandException("There's not enough room in the playlist to add `" + toAdd.size() + "` songs!");
 
-        songList.addAll(toAdd);
-        songList = new ArrayList<>(new HashSet<>(songList));
+        // Add all the songs to the song list
+        int added = 0;
+        for (String url : toAdd) {
+            if (playlist.songList.containsKey(url))
+                continue;
 
-        Document updatedDocument = new Document();
-        updatedDocument.append("songList", songList);
-        db.updateOne(Filters.eq("_id", document.get("_id", ObjectId.class)), new Document("$set", updatedDocument));
+            playlist.songList.put(url, new PlaylistSong(Instant.now().getEpochSecond(), ctx.getAuthor().getIdLong()));
+            added++;
+        }
 
-        ctx.send(String.format("Found %s songs and added %s songs which brings the playlist total to %s songs!", foundSongs, songList.size() - oldSize, songList.size()));
+        // Confirm to save
+        if (sendConfirmation(ctx, String.format("Are you sure you want to add %s songs to %s?", added, playlist.friendlyName))) {
+            playlist.save();
+            ctx.send(String.format("Found %s songs and added %s songs which brings the playlist total to %s songs!", toAdd.size(), added, playlist.songList.size()));
+        } else {
+            ctx.send("Okay, I won't update the playlist!");
+        }
+    }
+
+    @GroupCommand(group = "playlist", name = "remove", aliases = {"r"})
+    public void _commandRemove(Context ctx) throws CommandException, WaiterException {
+        // First translate our arguments into data
+        PlaylistUrlsContainer results = PlaylistUtils.getPlaylistAndURLs(ctx);
+        Playlist playlist = new Playlist(db, results.targetId, results.playlistName, Playlist.generateSearchName(results.playlistName));
+
+        // Check invokers permissions
+        Permission permission = playlist.getUserPermission(ctx.getAuthor().getIdLong());
+        if (!(permission.equals(Permission.EDITOR) || permission.equals(Permission.OWNER)))
+            throw new CommandException("You don't have permission to remove songs from this playlist!");
+
+        Set<String> keySet = playlist.songList.keySet();
+        for (Url url : results.songUrls) {
+            if (!keySet.contains(url.getFullUrl()))
+                throw new CommandException(String.format("Song %s isn't in playlist %s", url.getFullUrl(), playlist.friendlyName));
+        }
+
+        if (sendConfirmation(ctx, String.format("Are you sure you want to remove %s songs from %s?", results.songUrls.size(), playlist.friendlyName))) {
+            for (Url url : results.songUrls)
+                playlist.songList.remove(url.getFullUrl());
+            playlist.save();
+            ctx.send(String.format("Removed %s songs from %s", results.songUrls.size(), playlist.friendlyName));
+        } else {
+            ctx.send("Okay, I won't update the playlist!");
+        }
+
+
+    }
+
+    @GroupCommand(group = "playlist", name = "list", aliases = {"l"})
+    public void _commandList(Context ctx) throws CommandException, AudioException, MistyException, IOException {
+        long targetId = ctx.getAuthor().getIdLong();
+        String playlistName = "";
+        List<String> args = new ArrayList<>(ctx.getArgsStripped());
+
+        // First locate the target
+        if (!args.isEmpty()) {
+            String possibleTarget = args.get(0).replace("<@!", "!").replace("<@", "").replace(">", "");
+            if (15 <= possibleTarget.length() && possibleTarget.length() <= 21 && possibleTarget.matches("\\d+")) {
+                targetId = Long.parseLong(possibleTarget);
+                args.remove(0);
+            }
+        }
+
+        // Now see if we were given a playlist name
+        if (!args.isEmpty()) {
+            playlistName = String.join(" ", args);
+        }
+
+        if (playlistName.isEmpty()) { // List the users playlists
+            // Get the list of playlists
+            List<Playlist> playlists = new ArrayList<>();
+            for (Document document : db.find(Filters.or(Filters.eq("author", targetId), Filters.eq("editors", targetId)))) {
+                Playlist playlist = new Playlist(db, document);
+                Permission permission = playlist.getUserPermission(ctx.getAuthor().getIdLong());
+                if (permission.equals(Permission.VIEWER) || permission.equals(Permission.EDITOR) || permission.equals(Permission.OWNER))
+                    playlists.add(new Playlist(db, document));
+            }
+
+            // Ensure we found some
+            if (playlists.isEmpty())
+                throw new CommandException(String.format("I found no playlists by the user %s", PlaylistUtils.getTargetName(ctx, targetId)));
+
+            // Split playlists into chunks of 5
+            List<List<Playlist>> playlistList2D = new ArrayList<>();
+            final AtomicInteger counter = new AtomicInteger();
+            for (Playlist playlist : playlists) {
+                if (counter.getAndIncrement() % 5 == 0) {
+                    playlistList2D.add(new ArrayList<>());
+                }
+                playlistList2D.get(playlistList2D.size() - 1).add(playlist);
+            }
+
+            // Create the embed
+            List<MessageEmbed> embedList = new ArrayList<>();
+            for (List<Playlist> playlistList : playlistList2D) {
+                EmbedBuilder embedBuilder = new EmbedBuilder()
+                        .setTitle(PlaylistUtils.getTargetName(ctx, targetId) + " Playlist list!")
+                        .setDescription("Showing playlists they own and can edit.")
+                        .setColor(Color.GREEN);
+
+                for (Playlist playlist : playlistList) {
+                    StringBuilder builder = new StringBuilder();
+                    if (!playlist.description.isEmpty())
+                        builder.append(playlist.description).append("\n");
+
+                    builder.append("Author: ").append(PlaylistUtils.getTargetName(ctx, playlist.author)).append("\n");
+                    builder.append("Plays: ").append(playlist.plays).append("\n");
+                    builder.append("Songs: ").append(playlist.songList.size()).append("\n");
+                    builder.append("Editors: ").append(playlist.editors.size()).append("\n");
+                    builder.append("Role: ").append(StringUtils.capitalize(playlist.getUserPermission(targetId).toString())).append("\n");
+                    embedBuilder.addField(playlist.friendlyName, builder.toString(), true);
+                }
+                embedList.add(embedBuilder.build());
+            }
+            Paginator paginator = new Paginator(getYui(), (TextChannel) ctx.getChannel(), embedList, 60);
+            paginator.run();
+        } else { // Display the specified playlist
+            Playlist playlist = new Playlist(db, targetId, playlistName);
+            Permission permission = playlist.getUserPermission(ctx.getAuthor().getIdLong());
+            if (permission.equals(Permission.NONE))
+                throw new CommandException("You are not allowed to view this playlist!");
+
+            // Split songs into chunks of 10
+            List<List<String>> songUrls2D = new ArrayList<>();
+            final AtomicInteger counter = new AtomicInteger();
+            for (String song : playlist.songList.keySet()) {
+                if (counter.getAndIncrement() % 10 == 0) {
+                    songUrls2D.add(new ArrayList<>());
+                }
+                songUrls2D.get(songUrls2D.size() - 1).add(song);
+            }
+
+            // Create Embeds
+            List<MessageEmbed> embedList = new ArrayList<>();
+            for (List<String> songList : songUrls2D) {
+                EmbedBuilder embedBuilder = new EmbedBuilder()
+                        .setTitle(playlist.friendlyName)
+                        .setDescription(playlist.description)
+                        .setColor(Color.GREEN)
+                        .setThumbnail(playlist.image);
+
+                for (String song : songList) {
+                    PlaylistSong playlistSong = playlist.songList.get(song);
+                    AudioTrack audioTrack = songCache.getTrack(ctx.getGuild(), song);
+                    String builder = "Duration: " + AudioUtils.durationToString(audioTrack.getInfo().length) + "\n" +
+                            "Added By: " + PlaylistUtils.getTargetName(ctx, playlistSong.addedBy) + "\n" +
+                            "Added: " + Instant.ofEpochSecond(playlistSong.addedTimestamp).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("dd MMMM yyyy")) + "\n" +
+                            "Url: " + song;
+                    embedBuilder.addField(playlist.friendlyName, builder, true);
+                }
+                embedList.add(embedBuilder.build());
+            }
+            Paginator paginator = new Paginator(getYui(), (TextChannel) ctx.getChannel(), embedList, 60);
+            paginator.run();
+        }
+
+
     }
 
     private String getNextMessage(Context ctx) throws WaiterException {
