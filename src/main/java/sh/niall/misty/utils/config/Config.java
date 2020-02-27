@@ -10,13 +10,19 @@ public class Config {
 
     String mongoURL;
 
-    public String getDiscordErrorImage() { return discordErrorImage; }
+    public String getDiscordErrorImage() {
+        return discordErrorImage;
+    }
 
     public String getDiscordToken() {
         return discordToken;
     }
 
-    public String getMongoURL() { return mongoURL; }
+    public String getMongoURL() {
+        return mongoURL;
+    }
 
-    public List<String> getDiscordPrefixes() { return discordPrefixes; }
+    public List<String> getDiscordPrefixes() {
+        return discordPrefixes;
+    }
 }

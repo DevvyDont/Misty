@@ -9,7 +9,6 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import sh.niall.misty.Misty;
@@ -43,7 +42,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Playlists extends MistyCog {
@@ -341,7 +339,6 @@ public class Playlists extends MistyCog {
         Set<String> toAdd = new HashSet<>();
         for (Url url : results.songUrls) {
             String domain = url.getHost().toLowerCase().replace("www.", "");
-            System.out.println(url.getPath());
             if (url.getPath().length() <= 1)
                 throw new CommandException("Invalid URL provided: " + url.getFullUrl());
 
@@ -558,15 +555,4 @@ public class Playlists extends MistyCog {
         ctx.send(String.format("Added `%s` %s from the `%s` playlist to the queue!", songList.size(), Helper.singularPlural(songList.size(), "song", "songs"), playlist.friendlyName));
     }
 
-    private String getNextMessage(Context ctx) throws WaiterException {
-        GuildMessageReceivedEvent event = ((GuildMessageReceivedEvent) waitForEvent(
-                GuildMessageReceivedEvent.class,
-                check -> {
-                    GuildMessageReceivedEvent e = (GuildMessageReceivedEvent) check;
-                    return (e.getChannel().getIdLong() == ctx.getChannel().getIdLong()) && (e.getAuthor().getIdLong() == ctx.getAuthor().getIdLong());
-                }, 20, TimeUnit.SECONDS));
-        if (event == null)
-            return null;
-        return event.getMessage().getContentRaw();
-    }
 }

@@ -29,12 +29,10 @@ public class SongCache {
 
     private MongoCollection<Document> db = Misty.database.getCollection("songCache");
     private AudioPlayerManager audioPlayerManager;
-    private Yui yui;
     private int daysToExpire = 30;
 
     public SongCache(Yui yui, AudioPlayerManager audioPlayerManager) {
         this.audioPlayerManager = audioPlayerManager;
-        this.yui = yui;
         yui.getExecutor().execute(() -> {
             while (true) {
                 updateTask();
@@ -47,6 +45,17 @@ public class SongCache {
         });
     }
 
+    /**
+     * Gets a song from the cache. If it's not in the cache, retrieves it from the source and stores it. For playlists use #getPlaylist.
+     *
+     * @param guild The current guild
+     * @param url   The URL to lookup
+     * @return The AudioTrack found
+     * @throws AudioException   Thrown if there was an issue looking up the song
+     * @throws MistyException   Thrown if there was an issue looking up the song
+     * @throws IOException      Thrown if there was an issue decoding/encoding the track
+     * @throws CommandException Thrown if no songs were found
+     */
     public AudioTrack getTrack(Guild guild, String url) throws AudioException, MistyException, IOException, CommandException {
         // First check the database
         Document document = db.find(Filters.eq("url", url)).first();
@@ -69,6 +78,17 @@ public class SongCache {
         return tracks.get(0);
     }
 
+    /**
+     * Looks up the playlist and stores the video urls
+     *
+     * @param guild The current guild
+     * @param url   The URL to lookup
+     * @return A list of AudioTracks found
+     * @throws AudioException   Thrown if there was an issue looking up the song
+     * @throws MistyException   Thrown if there was an issue looking up the song
+     * @throws IOException      Thrown if there was an issue decoding/encoding the track
+     * @throws CommandException Thrown if no songs were found
+     */
     public List<AudioTrack> getPlaylist(Guild guild, String url) throws AudioException, MistyException, CommandException, IOException {
         // URLs we want to query directly and then cache the videos
         List<AudioTrack> tracks = AudioUtils.runQuery(audioPlayerManager, url, guild);
@@ -92,16 +112,33 @@ public class SongCache {
         return addedTracks;
     }
 
+    /**
+     * Encodes a track for storage
+     *
+     * @param audioTrack The AudioTrack to encode
+     * @return A byte string to store
+     * @throws IOException Thrown if there was an issue encoding
+     */
     private String encodeTrack(AudioTrack audioTrack) throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         audioPlayerManager.encodeTrack(new MessageOutput(outputStream), audioTrack);
         return Base64.encodeBase64String(outputStream.toByteArray());
     }
 
+    /**
+     * Converts a byte string into an AudioTrack
+     *
+     * @param input The Byte String
+     * @return The Audio Track
+     * @throws IOException Thrown if there was an issue decoding
+     */
     private AudioTrack decodeString(String input) throws IOException {
         return audioPlayerManager.decodeTrack(new MessageInput(new ByteArrayInputStream(Base64.decodeBase64(input)))).decodedTrack;
     }
 
+    /**
+     * Updates songs which have expired
+     */
     public void updateTask() {
         try {
             // Find all documents which have expired
@@ -124,6 +161,5 @@ public class SongCache {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 }

@@ -24,6 +24,12 @@ public class PlaylistUtils {
     static Pattern ytVideoIdPattern = Pattern.compile("(?<=youtu.be/|watch\\?v=|/videos/|embed/)[^#&?]*");
     static Pattern ytPlaylistIdPattern = Pattern.compile("[?&]list=([^#&?]+)*");
 
+    /**
+     * Runs validation for a playlist name
+     *
+     * @param name The string to validate
+     * @throws CommandException Thrown if there was an issue with the string
+     */
     public static void validatePlaylistName(String name) throws CommandException {
         String nameTrim = name.trim();
         int totalCharacters = nameTrim.replace(" ", "").length();
@@ -43,6 +49,12 @@ public class PlaylistUtils {
         }
     }
 
+    /**
+     * Runs validation for a playlist description
+     *
+     * @param description The string to validate
+     * @throws CommandException Thrown if there was an issue with the string
+     */
     public static void validatePlaylistDescription(String description) throws CommandException {
         if (description.length() > descriptionCharacterMax)
             throw new CommandException("Playlist descriptions must be no longer than " + descriptionCharacterMax + " characters!");
@@ -54,6 +66,13 @@ public class PlaylistUtils {
             throw new CommandException("Playlist names can't have multiple spaces!");
     }
 
+    /**
+     * Returns the targets name or unknown user if they can't be found
+     *
+     * @param ctx The command context
+     * @param id  The target ID
+     * @return The targets name
+     */
     public static String getTargetName(Context ctx, long id) {
         Member member = ctx.getGuild().getMemberById(id);
         if (member != null)
@@ -66,15 +85,24 @@ public class PlaylistUtils {
         return "Unknown User (" + id + ")";
     }
 
+    /**
+     * Returns true if the target can't be found
+     * (The bot can't see the user)
+     *
+     * @param ctx The command context
+     * @param id  The target ID
+     * @return true if they can't be found, false if they can
+     */
     public static boolean targetDoesntExist(Context ctx, long id) {
         return (ctx.getGuild().getMemberById(id) == null && ctx.getBot().getUserById(id) == null);
     }
 
     /**
+     * Gets the Target ID, Playlist name and URLs from command arguments
      * Used for the Add and Remove commands
-     * Calculates the target id, playlist name and the urls from the arguments
      *
      * @param ctx Context from the command invoked
+     * @return The results
      */
     public static PlaylistUrlsContainer getPlaylistAndURLs(Context ctx) throws CommandException {
         // First some validation, we need at least two arguments (name and URL)
@@ -105,7 +133,14 @@ public class PlaylistUtils {
         return new PlaylistUrlsContainer(targetId, searchName, detectedUrls);
     }
 
-    public static PlaylistLookupContainer getTargetAndName(Context ctx) throws CommandException {
+    /**
+     * Gets the Target ID and Playlist name from command arguments
+     * Used for the List and Play command
+     *
+     * @param ctx The Command Context
+     * @return The results
+     */
+    public static PlaylistLookupContainer getTargetAndName(Context ctx) {
         // Set default values
         long targetId = ctx.getAuthor().getIdLong();
         String playlistName = "";
@@ -130,6 +165,12 @@ public class PlaylistUtils {
         return new PlaylistLookupContainer(targetId, playlistName);
     }
 
+    /**
+     * Retrieves the Video ID from a Youtube URL
+     *
+     * @param url The URL to search
+     * @return The Video ID, null if none was found
+     */
     public static String getYoutubeVideoId(String url) {
         Matcher matcher = ytVideoIdPattern.matcher(url);
         if (!matcher.find())
@@ -137,6 +178,12 @@ public class PlaylistUtils {
         return matcher.group();
     }
 
+    /**
+     * Retrieves the Playlist ID from a Youtube URL
+     *
+     * @param url The URL to search
+     * @return The Playlist ID, null if none was found
+     */
     public static String getYoutubePlaylistId(String url) {
         Matcher matcher = ytPlaylistIdPattern.matcher(url);
         if (!matcher.find())

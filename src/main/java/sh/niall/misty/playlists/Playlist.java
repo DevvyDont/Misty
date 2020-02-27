@@ -72,10 +72,11 @@ public class Playlist {
         loadFromDocument(document);
     }
 
+
     /**
-     * Loads the playlist from a document
+     * Loads the playlist information from a document
      *
-     * @param document
+     * @param document The document to load from
      */
     private void loadFromDocument(Document document) {
         this.author = document.getLong("author");
@@ -111,8 +112,13 @@ public class Playlist {
             return Permission.VIEWER;
     }
 
+
     /**
      * Saves the playlist to the database
+     * Inserts the document if it doesn't already exist
+     * Updates the current document using set if it does
+     *
+     * @throws CommandException Thrown if there was an issue with the database
      */
     public void save() throws CommandException {
         Document document = new Document();
@@ -182,10 +188,19 @@ public class Playlist {
         }
     }
 
+    /**
+     * Deletes the playlist from the database
+     */
     public void delete() {
         db.deleteOne(Filters.eq("_id", originalDocument.get("_id", ObjectId.class)));
     }
 
+    /**
+     * Converts a string into a valid search name
+     *
+     * @param friendlyName The string to convert
+     * @return The converted string
+     */
     public static String generateSearchName(String friendlyName) {
         return friendlyName.trim().toLowerCase();
     }

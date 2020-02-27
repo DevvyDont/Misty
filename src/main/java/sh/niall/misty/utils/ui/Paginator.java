@@ -25,11 +25,11 @@ public class Paginator {
     private int timeout;
     private long messageId;
 
-    // Emojis
+    // Emoji
     String leftArrow = "⬅️";
     String rightArrow = "➡️";
 
-    // Indexs
+    // Indexes
     private int currentIndex = 0;
 
     public Paginator(Yui yui, TextChannel channel, List<MessageEmbed> pages, int timeout) throws CommandException {
@@ -44,6 +44,9 @@ public class Paginator {
         this.timeout = timeout;
     }
 
+    /**
+     * Starts the paginator, or just posts the embed if there's only one page
+     */
     public void run() {
         TextChannel channel = jda.getGuildById(this.guildId).getTextChannelById(this.channelId);
         Message message = channel.sendMessage(pages.get(0)).complete();
@@ -55,6 +58,9 @@ public class Paginator {
         waitForReaction();
     }
 
+    /**
+     * Waits for a reaction and runs the handle method. Run it's using null if it timed out
+     */
     private void waitForReaction() {
         WaiterStorage waiterStorage = new WaiterStorage(GuildMessageReactionAddEvent.class, check -> {
             GuildMessageReactionAddEvent e = (GuildMessageReactionAddEvent) check;
@@ -68,6 +74,11 @@ public class Paginator {
         }
     }
 
+    /**
+     * Modifies the paginator upon reaction, removes reactions if it timed out.
+     *
+     * @param event The reaction event
+     */
     private void handleNewReaction(GuildMessageReactionAddEvent event) {
         if (event == null) {
             jda.getGuildById(guildId).getTextChannelById(channelId).retrieveMessageById(messageId).queue(message -> message.clearReactions().queue());
@@ -83,6 +94,9 @@ public class Paginator {
         waitForReaction();
     }
 
+    /**
+     * Switches the paginator to the next page. Back to the start if we're on the last page.
+     */
     private void nextPage() {
         currentIndex++;
         if (currentIndex == pages.size()) {
@@ -91,6 +105,9 @@ public class Paginator {
         refresh();
     }
 
+    /**
+     * Switches the paginator to the previous page. Goes to the end if we're on the first page.
+     */
     private void previousPage() {
         currentIndex--;
         if (currentIndex == -1) {
@@ -99,6 +116,9 @@ public class Paginator {
         refresh();
     }
 
+    /**
+     * Refreshes the displayed page on the paginator.
+     */
     private void refresh() {
         jda.getGuildById(guildId).getTextChannelById(channelId).retrieveMessageById(messageId).queue(message -> {
             message.editMessage(pages.get(currentIndex)).queue();

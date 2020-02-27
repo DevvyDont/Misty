@@ -10,10 +10,31 @@ import java.util.concurrent.TimeUnit;
 
 public class Menu {
 
+    /**
+     * Creates a menu and waits for the users input.
+     *
+     * @param ctx      The context to send it in
+     * @param question The question to ask
+     * @param options  The options the user can pick
+     * @return The option the user picked
+     * @throws CommandException Thrown if the user times out
+     * @throws WaiterException  Thrown if there was an issue waiting
+     */
     public static int showMenu(Context ctx, String question, String[] options) throws WaiterException, CommandException {
         return showMenu(ctx, question, options, 3);
     }
 
+    /**
+     * Creates a menu and waits for the users input.
+     *
+     * @param ctx         The context to send it in
+     * @param question    The question to ask
+     * @param options     The options the user can pick
+     * @param maxAttempts How many attempts they're allowed
+     * @return The option the user picked
+     * @throws CommandException Thrown if the user times out
+     * @throws WaiterException  Thrown if there was an issue waiting
+     */
     public static int showMenu(Context ctx, String question, String[] options, int maxAttempts) throws CommandException, WaiterException {
         int attempts = 0;
 
