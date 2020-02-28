@@ -190,6 +190,8 @@ public class Playlists extends MistyCog {
                         if (playlist.friendlyName.equals(newMessage))
                             throw new CommandException("The old and new playlist names match!");
                         PlaylistUtils.validatePlaylistName(newMessage);
+                        if (db.find(Filters.and(Filters.eq("author", playlist.author), Filters.eq("searchName", Playlist.generateSearchName(newMessage)))).first() != null)
+                            throw new CommandException("You already have a playlist called: " + newMessage);
                         embedBuilder.addField("Old Name:", playlist.friendlyName, true);
                         embedBuilder.addField("New Name:", newMessage, true);
                         playlist.friendlyName = newMessage;
@@ -540,6 +542,12 @@ public class Playlists extends MistyCog {
         Set<String> songList = playlist.songList.keySet();
         if (audioGuild.getQueue().size() + songList.size() > AudioGuild.maxSongsInQueue)
             throw new CommandException("Can't add playlist as there's not enough room in the queue! Please clear the queue or try again later.");
+
+        // Add a play to the counter
+        if (Integer.MAX_VALUE > playlist.plays) {
+            playlist.plays++;
+            playlist.save();
+        }
 
         // Add the songs to the queue
         for (String url : songList) {
