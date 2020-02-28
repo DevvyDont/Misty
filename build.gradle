@@ -18,8 +18,8 @@ repositories {
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
-    compile 'net.dv8tion:JDA:4.0.0_79'
-    implementation 'com.github.niallsh:Yui:af2349a19f'
+    compile 'net.dv8tion:JDA:4.1.1_101'
+    implementation 'com.github.niallsh:Yui:ab7d9fdeb8'
     compile 'com.sedmelluq:lavaplayer:1.3.32'
     compile 'com.sedmelluq:jda-nas:1.1.0'
     compile 'ch.qos.logback:logback-classic:1.2.3'
@@ -27,6 +27,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.8.6'
     compile 'org.mongodb:mongo-java-driver:3.4.3'
     implementation 'com.squareup.okhttp3:okhttp:4.2.1'
+    implementation 'com.github.URL-Detector:URL-Detector:url-detector-0.1.22-SNAPSHOT'
 }
 
 compileJava.options.encoding = 'UTF-8'
