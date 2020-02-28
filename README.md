@@ -10,6 +10,11 @@ Misty is a Discord bot for some of the servers I'm in. Mainly just to provide co
 Place this file in the same directory as the jar!
 ```json
 {
-  "discordToken": "abc"
+  "discordErrorImage": "",
+  "discordToken": "",
+  "discordPrefixes": [
+    ""
+  ],
+  "mongoURL": ""
 }
 ```
