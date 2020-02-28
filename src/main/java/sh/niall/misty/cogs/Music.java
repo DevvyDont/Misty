@@ -3,6 +3,8 @@ package sh.niall.misty.cogs;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.TextChannel;
 import org.apache.commons.lang3.StringUtils;
 import sh.niall.misty.audio.AudioGuild;
 import sh.niall.misty.audio.AudioGuildManager;
@@ -10,12 +12,14 @@ import sh.niall.misty.audio.TrackRequest;
 import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
 import sh.niall.misty.utils.audio.AudioUtils;
+import sh.niall.misty.utils.ui.Paginator;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.commands.interfaces.Command;
 import sh.niall.yui.exceptions.CommandException;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -361,33 +365,50 @@ public class Music extends Cog {
             throw new CommandException("There is no queue because I'm not in a voice channel");
 
         AudioGuild audioGuild = audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong());
-        List<TrackRequest> queue = audioGuild.getQueue();
+        List<TrackRequest> queue = new ArrayList<>(audioGuild.getQueue());
 
         if (queue.isEmpty())
             throw new CommandException("The queue is currently empty! Request a song :)");
 
-        StringBuilder output = new StringBuilder("**Music Queue:**\n");
-        int count = 1;
+        List<EmbedBuilder> embedBuilders = new ArrayList<>();
+        int trackNumber = 1;
+        while (!queue.isEmpty()) {
 
-        for (TrackRequest trackRequest : queue) {
-            if (output.length() > 1800) {
-                output.append("and more...");
-                break;
+            int added = 0;
+            EmbedBuilder embedBuilder = new EmbedBuilder();
+            embedBuilder.setTitle("Music Queue");
+            embedBuilder.setColor(Color.CYAN);
+            StringBuilder builder = new StringBuilder();
+
+            while (!queue.isEmpty() && added < 5) {
+                TrackRequest trackRequest = queue.remove(0);
+                builder.append(String.format(
+                        "**%s. %s**\nRequested by: %s\nLength: %s\nUrl: %s\n\n",
+                        trackNumber,
+                        trackRequest.audioTrack.getInfo().title,
+                        getYui().getJda().getUserById(trackRequest.requestAuthor).getAsMention(),
+                        AudioUtils.durationToString(trackRequest.audioTrack.getDuration()),
+                        trackRequest.audioTrack.getInfo().uri
+                ));
+                added++;
+                trackNumber++;
             }
-
-            output.append(
-                    String.format(
-                            "__%s. %s__\nRequested by: %s\nLength: %s\n\n",
-                            count,
-                            trackRequest.audioTrack.getInfo().title,
-                            getYui().getJda().getUserById(trackRequest.requestAuthor).getAsMention(),
-                            AudioUtils.durationToString(trackRequest.audioTrack.getDuration())
-                    )
-            );
-            count++;
+            embedBuilder.setDescription(builder.toString());
+            embedBuilders.add(embedBuilder);
         }
-        audioGuild.setLastTextChannel(ctx.getChannel().getIdLong());
-        ctx.send(output.toString());
+
+        // Add page numbers
+        List<MessageEmbed> output = new ArrayList<>();
+        int page = 1;
+        int total = embedBuilders.size();
+        for (EmbedBuilder embedBuilder : embedBuilders) {
+            embedBuilder.setFooter(String.format("Page %s of %s", page, total));
+            output.add(embedBuilder.build());
+            page++;
+        }
+
+        Paginator paginator = new Paginator(getYui(), (TextChannel) ctx.getChannel(), output, 60);
+        paginator.run();
     }
 
     @Command(name = "removeduplicates")
