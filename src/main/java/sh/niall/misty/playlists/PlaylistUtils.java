@@ -34,7 +34,7 @@ public class PlaylistUtils {
         String nameTrim = name.trim();
         int totalCharacters = nameTrim.replace(" ", "").length();
 
-        if (totalCharacters > nameCharacterMax || totalCharacters < nameCharacterMin)
+        if (!(nameCharacterMin <= totalCharacters && totalCharacters <= nameCharacterMax))
             throw new CommandException("Playlist names must be between " + nameCharacterMin + " and " + nameCharacterMax + " characters!");
 
         if (!name.matches("^[a-zA-Z0-9 ]*$"))
@@ -76,7 +76,7 @@ public class PlaylistUtils {
     public static String getTargetName(Context ctx, long id) {
         Member member = ctx.getGuild().getMemberById(id);
         if (member != null)
-            return member.getEffectiveName() + "#" + member.getUser().getDiscriminator();
+            return member.getEffectiveName();
 
         User user = ctx.getBot().getUserById(id);
         if (user != null)

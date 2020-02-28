@@ -5,10 +5,7 @@ import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
 import org.slf4j.LoggerFactory;
 import sh.niall.misty.audio.AudioGuildManager;
-import sh.niall.misty.cogs.Animals;
-import sh.niall.misty.cogs.Music;
-import sh.niall.misty.cogs.Playlists;
-import sh.niall.misty.cogs.Utilities;
+import sh.niall.misty.cogs.*;
 import sh.niall.misty.errors.ErrorHandler;
 import sh.niall.misty.playlists.SongCache;
 import sh.niall.misty.utils.config.Config;
@@ -49,6 +46,7 @@ public class Misty {
                 new Animals(),
                 new Music(audioGuildManager),
                 new Playlists(audioGuildManager, songCache),
+                new Tags(),
                 new Utilities()
         );
 

@@ -25,7 +25,7 @@ public class Playlist {
     private Document originalDocument = null;
 
     /**
-     * Creates a new playlist and saves it to the database
+     * Creates a new playlist
      *
      * @param db           The playlist Mongo Collection
      * @param author       The current owner of the playlist
