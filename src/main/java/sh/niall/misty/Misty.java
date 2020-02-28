@@ -44,6 +44,7 @@ public class Misty {
         // Add the cogs in
         yui.addCogs(
                 new Animals(),
+                new Help(),
                 new Music(audioGuildManager),
                 new Playlists(audioGuildManager, songCache),
                 new Tags(),
