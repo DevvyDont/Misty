@@ -68,6 +68,9 @@ public class Playlists extends MistyCog {
 
     @GroupCommand(group = "playlist", name = "create", aliases = {"c"})
     public void _commandCreate(Context ctx) throws CommandException {
+        if (ctx.getArgsStripped().isEmpty())
+            throw new CommandException("Please provide a playlist name.");
+
         // Get all of the users playlists, ensure they have less than 10
         if (this.db.count(Filters.eq("author", ctx.getAuthor().getIdLong())) >= maxPlaylists)
             throw new CommandException("You can only have a total of " + maxPlaylists + " playlists!");
@@ -254,6 +257,9 @@ public class Playlists extends MistyCog {
                         if (PlaylistUtils.targetDoesntExist(ctx, newTarget))
                             throw new CommandException("I don't know who that is! Please make sure the editor you're trying to add is in this server.");
 
+                        if (ctx.getBot().getUserById(newTarget).isBot())
+                            throw new CommandException("You can't make a bot an editor!");
+
                         playlist.editors.add(newTarget);
                         embedBuilder.addField("New editor:", PlaylistUtils.getTargetName(ctx, newTarget), false);
                         embedBuilder.addField("WARNING:", "Editors can Add and Remove songs from a playlist. Please make sure you trust who you're adding.", false);
@@ -280,6 +286,9 @@ public class Playlists extends MistyCog {
                         long newOwnerLong = Long.parseLong(newOwner);
                         if (PlaylistUtils.targetDoesntExist(ctx, newOwnerLong))
                             throw new CommandException("I don't know who that is! Please make sure the new owner is in this server.");
+
+                        if (ctx.getBot().getUserById(newOwnerLong).isBot())
+                            throw new CommandException("You can't make a bot an owner of a playlist!");
 
                         if (db.count(Filters.eq("author", newOwnerLong)) >= maxPlaylists)
                             throw new CommandException("They already have the maximum amount of playlists!");

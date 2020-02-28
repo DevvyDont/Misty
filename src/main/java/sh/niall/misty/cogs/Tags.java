@@ -217,6 +217,9 @@ public class Tags extends MistyCog {
                         if (ctx.getGuild().getMemberById(newOwnerLong) == null)
                             throw new CommandException("I don't know who that is! Please make sure the new owner is in this server.");
 
+                        if (ctx.getBot().getUserById(newOwnerLong).isBot())
+                            throw new CommandException("You can't transfer a tag to a bot!");
+
                         if (this.db.count(Filters.and(Filters.eq("author", ctx.getAuthor().getIdLong()), Filters.eq("guild", ctx.getGuild().getIdLong()))) >= maxTagsPerMember)
                             throw new CommandException("They already have the maximum amount of tags in this guild!");
 
