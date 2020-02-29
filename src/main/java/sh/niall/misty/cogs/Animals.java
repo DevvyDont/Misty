@@ -4,6 +4,8 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.commands.interfaces.Command;
@@ -17,7 +19,6 @@ public class Animals extends Cog {
     OkHttpClient client = new OkHttpClient();
     final String[] dogChoices = {"🐶 Woof! 🐶", "🐶 Bark! 🐶", "🐶 Arf! 🐶"};
     final String[] catChoices = {"\uD83D\uDC31 Meow! \uD83D\uDC31", "\uD83D\uDC31 Purr! \uD83D\uDC31"};
-    final String[] catUrls = {"https://cataas.com/c", "https://cataas.com/c/gif"};
 
     @Command(name = "dog", aliases = {"puppo", "puppos"})
     public void _commandDog(Context context) throws IOException, CommandException {
@@ -63,13 +64,27 @@ public class Animals extends Cog {
     }
 
     @Command(name = "cat", aliases = {"meow"})
-    public void _commandCat(Context context) {
+    public void _commandCat(Context context) throws IOException, CommandException {
         context.getChannel().sendTyping().queue();
+
+        // Request a resource
+        Response resourceRequest = client.newCall(new Request.Builder().url("https://api.thecatapi.com/v1/images/search").build()).execute();
+
+        // Ensure we got through
+        if (resourceRequest.code() != 200) {
+            resourceRequest.close();
+            throw new CommandException("There were no available cats to photograph!");
+        }
+
+        // Covert string to JSON
+        JSONObject jsonObject = (new JSONArray(resourceRequest.body().string())).getJSONObject(0);
+
+        // Create the embed
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Cat Photo!");
         embedBuilder.setDescription(catChoices[(int) (Math.random() * catChoices.length)]);
         embedBuilder.setColor(Color.cyan);
-        embedBuilder.setImage(catUrls[(int) (Math.random() * catUrls.length)]);
+        embedBuilder.setImage((String) jsonObject.get("url"));
         context.send(embedBuilder.build());
     }
 }
