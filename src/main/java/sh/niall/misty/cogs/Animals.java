@@ -15,9 +15,9 @@ import java.io.IOException;
 public class Animals extends Cog {
 
     OkHttpClient client = new OkHttpClient();
-    String[] dogChoices = {"🐶 Woof! 🐶", "🐶 Bark! 🐶", "🐶 Arf! 🐶"};
-    String[] catChoices = {"\uD83D\uDC31 Meow! \uD83D\uDC31", "\uD83D\uDC31 Purr! \uD83D\uDC31"};
-    String[] catUrls = {"https://cataas.com/c", "https://cataas.com/c/gif"};
+    final String[] dogChoices = {"🐶 Woof! 🐶", "🐶 Bark! 🐶", "🐶 Arf! 🐶"};
+    final String[] catChoices = {"\uD83D\uDC31 Meow! \uD83D\uDC31", "\uD83D\uDC31 Purr! \uD83D\uDC31"};
+    final String[] catUrls = {"https://cataas.com/c", "https://cataas.com/c/gif"};
 
     @Command(name = "dog", aliases = {"puppo", "puppos"})
     public void _commandDog(Context context) throws IOException, CommandException {

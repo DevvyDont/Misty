@@ -26,8 +26,8 @@ public class Paginator {
     private long messageId;
 
     // Emoji
-    String leftArrow = "⬅️";
-    String rightArrow = "➡️";
+    final String leftArrow = "⬅️";
+    final String rightArrow = "➡️";
 
     // Indexes
     private int currentIndex = 0;
