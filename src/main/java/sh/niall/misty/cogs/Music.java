@@ -370,6 +370,7 @@ public class Music extends Cog {
         if (queue.isEmpty())
             throw new CommandException("The queue is currently empty! Request a song :)");
 
+        long queueTotalTime = 0;
         List<EmbedBuilder> embedBuilders = new ArrayList<>();
         int trackNumber = 1;
         while (!queue.isEmpty()) {
@@ -392,16 +393,19 @@ public class Music extends Cog {
                 ));
                 added++;
                 trackNumber++;
+                queueTotalTime += trackRequest.audioTrack.getDuration();
             }
             embedBuilder.setDescription(builder.toString());
             embedBuilders.add(embedBuilder);
         }
 
-        // Add page numbers
+        // Add page numbers and total time
         List<MessageEmbed> output = new ArrayList<>();
         int page = 1;
         int total = embedBuilders.size();
+        String totalTimeString = "Total time remaining: " + AudioUtils.durationToString(queueTotalTime);
         for (EmbedBuilder embedBuilder : embedBuilders) {
+            embedBuilder.setDescription(totalTimeString);
             embedBuilder.setFooter(String.format("Page %s of %s", page, total));
             output.add(embedBuilder.build());
             page++;
