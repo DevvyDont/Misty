@@ -3,6 +3,7 @@ package sh.niall.misty.cogs;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import net.dv8tion.jda.api.EmbedBuilder;
+import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import sh.niall.misty.Misty;
 import sh.niall.misty.playlists.PlaylistUtils;
@@ -51,11 +52,18 @@ public class Social extends MistyCog {
         if (ctx.getArgsStripped().isEmpty())
             throw new CommandException("Please provide a bio to set, or run the clear sub command to remove you current bio.");
 
+        // Get their new bio
+        String newBio = ctx.getContent();
+        newBio = StringUtils.replaceOnce(newBio, ctx.getPrefix(), "");
+        newBio = StringUtils.replaceOnceIgnoreCase(newBio, ctx.getCommandWord(), "");
+        newBio = StringUtils.replaceOnceIgnoreCase(newBio, ctx.getSubCommandWord(), "").trim();
+
         // Validate their new bio
-        String newBio = String.join(" ", ctx.getArgsStripped()).trim();
         int length = newBio.length();
         if (length < 3 || 500 < length)
             throw new CommandException("Bios must be between 3 and 500 characters!");
+        if (StringUtils.countMatches(newBio, "\n") > 10)
+            throw new CommandException("Bios must have no more than 10 new lines!");
 
         // Create the new document
         Document updatedDocument = new Document().append("_id", ctx.getAuthor().getIdLong()).append("bio", newBio);
