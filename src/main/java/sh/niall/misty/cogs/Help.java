@@ -44,6 +44,11 @@ public class Help extends Cog {
         commands.put("playlist list", "Lists a users playlist or displays a playlist. Usage: playlist list @Misty or playlist list my new playlist");
         commands.put("playlist play", "Adds the playlists songs to the music queue. Usage: playlist play my new playlist");
 
+        // Bio
+        commands.put("bio", "Show a users bio. Usage: bio or bio @Misty");
+        commands.put("bio set", "Sets your bio. Usage: bio set bio-here");
+        commands.put("bio clear", "Removes your current bio.");
+
         // Tags
         commands.put("tag", "Displays a tags content. Usage: tag tag-name");
         commands.put("tag create", "Creates a new tag. Usage: tag create tag-name");
@@ -82,6 +87,9 @@ public class Help extends Cog {
             case "playlist":
                 ctx.send(String.format("**Playlists:**\n```%s```", getPlaylist()));
                 return;
+            case "bio":
+                ctx.send(String.format("**Bios:**\n```%s```", getBios()));
+                return;
             case "tags":
                 ctx.send(String.format("**Tags:**\n```%s```", getTags()));
                 return;
@@ -94,6 +102,16 @@ public class Help extends Cog {
 
     private String getUtilities() {
         return formatCommand("avatar") + formatCommand("screenshare");
+    }
+
+    private String getBios() {
+        StringBuilder builder = new StringBuilder();
+        for (String command : commands.keySet()) {
+            if (!command.startsWith("bio"))
+                continue;
+            builder.append(formatCommand(command));
+        }
+        return builder.toString();
     }
 
     private String getTags() {
@@ -144,7 +162,7 @@ public class Help extends Cog {
         ctx.send(String.format("**Animals:**\n```%s```", getAnimals()));
         ctx.send(String.format("**Music:**\n```%s```", getMusic()));
         ctx.send(String.format("**Playlists:**\n```%s```", getPlaylist()));
-        ctx.send(String.format("**Tags:**\n```%s```", getTags()) + String.format("**Utilities:**\n```%s```", getUtilities()));
+        ctx.send(String.format("**Bios:**\n```%s```", getBios()) + String.format("**Tags:**\n```%s```", getTags()) + String.format("**Utilities:**\n```%s```", getUtilities()));
     }
 
     private String formatCommand(String command) {
