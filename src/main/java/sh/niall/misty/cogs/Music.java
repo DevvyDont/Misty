@@ -3,8 +3,6 @@ package sh.niall.misty.cogs;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.TextChannel;
 import org.apache.commons.lang3.StringUtils;
 import sh.niall.misty.audio.AudioGuild;
 import sh.niall.misty.audio.AudioGuildManager;
@@ -12,11 +10,12 @@ import sh.niall.misty.audio.TrackRequest;
 import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
 import sh.niall.misty.utils.audio.AudioUtils;
-import sh.niall.misty.utils.ui.Paginator;
+import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.commands.interfaces.Command;
 import sh.niall.yui.exceptions.CommandException;
+import sh.niall.yui.exceptions.WaiterException;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -360,7 +359,7 @@ public class Music extends Cog {
     }
 
     @Command(name = "queue", aliases = {"q"})
-    public void _commandQueue(Context ctx) throws CommandException {
+    public void _commandQueue(Context ctx) throws CommandException, WaiterException {
         if (!ctx.getGuild().getAudioManager().isConnected())
             throw new CommandException("There is no queue because I'm not in a voice channel");
 
@@ -400,18 +399,12 @@ public class Music extends Cog {
         }
 
         // Add page numbers and total time
-        List<MessageEmbed> output = new ArrayList<>();
-        int page = 1;
-        int total = embedBuilders.size();
         String totalTimeString = "Total time remaining: " + AudioUtils.durationToString(queueTotalTime);
-        for (EmbedBuilder embedBuilder : embedBuilders) {
+        for (EmbedBuilder embedBuilder : embedBuilders)
             embedBuilder.setDescription(totalTimeString);
-            embedBuilder.setFooter(String.format("Page %s of %s", page, total));
-            output.add(embedBuilder.build());
-            page++;
-        }
 
-        Paginator paginator = new Paginator(getYui(), (TextChannel) ctx.getChannel(), output, 60);
+        // Run the paginator
+        Paginator paginator = new Paginator(ctx, embedBuilders, 160, true);
         paginator.run();
     }
 
