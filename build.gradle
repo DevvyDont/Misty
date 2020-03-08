@@ -29,6 +29,7 @@ dependencies {
     compile 'org.mongodb:mongo-java-driver:3.4.3'
     implementation 'com.squareup.okhttp3:okhttp:4.2.1'
     implementation 'com.github.URL-Detector:URL-Detector:url-detector-0.1.22-SNAPSHOT'
+    compile 'org.json:json:20190722'
 }
 
 compileJava.options.encoding = 'UTF-8'

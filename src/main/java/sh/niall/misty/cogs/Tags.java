@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Tags extends MistyCog {
 
     MongoCollection<Document> db = Misty.database.getCollection("tags");
-    static int maxTagsPerMember = 40;
+    final static int maxTagsPerMember = 40;
 
 
     @Group(name = "tag", aliases = {"t", "tags"})
