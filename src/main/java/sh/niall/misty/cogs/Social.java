@@ -1,8 +1,12 @@
 package sh.niall.misty.cogs;
 
+import com.linkedin.urls.Url;
+import com.linkedin.urls.detection.UrlDetector;
+import com.linkedin.urls.detection.UrlDetectorOptions;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import net.dv8tion.jda.api.EmbedBuilder;
+import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import sh.niall.misty.Misty;
 import sh.niall.misty.playlists.PlaylistUtils;
@@ -13,6 +17,8 @@ import sh.niall.yui.commands.interfaces.GroupCommand;
 import sh.niall.yui.exceptions.CogException;
 import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.WaiterException;
+
+import java.util.List;
 
 public class Social extends MistyCog {
 
@@ -51,14 +57,69 @@ public class Social extends MistyCog {
         if (ctx.getArgsStripped().isEmpty())
             throw new CommandException("Please provide a bio to set, or run the clear sub command to remove you current bio.");
 
+        // Get their new bio
+        String newBio = ctx.getContent();
+        newBio = StringUtils.replaceOnce(newBio, ctx.getPrefix(), "");
+        newBio = StringUtils.replaceOnceIgnoreCase(newBio, ctx.getCommandWord(), "");
+        newBio = StringUtils.replaceOnceIgnoreCase(newBio, ctx.getSubCommandWord(), "");
+        newBio = StringUtils.replace(newBio, "\n", " \n ").trim();
+
         // Validate their new bio
-        String newBio = String.join(" ", ctx.getArgsStripped()).trim();
         int length = newBio.length();
         if (length < 3 || 500 < length)
             throw new CommandException("Bios must be between 3 and 500 characters!");
+        if (StringUtils.countMatches(newBio, "\n") > 10)
+            throw new CommandException("Bios must have no more than 10 new lines!");
+
+        // Add < > to any url
+        StringBuilder stringBuilder = new StringBuilder();
+        for (String word : newBio.split(" ")) {
+            // Urls need to be at least 10 letters long
+            if (word.length() < 10) {
+                stringBuilder.append(word).append(" ");
+                continue;
+            }
+
+            // See if the word has a URL
+            List<Url> detected = new UrlDetector(word, UrlDetectorOptions.Default).detect();
+            if (detected.isEmpty()) {
+                stringBuilder.append(word).append(" ");
+                continue;
+            }
+
+            // See if we just have a bare url
+            String url = detected.get(0).getFullUrl();
+            if (word.length() == url.length()) {
+                stringBuilder.append("<").append(url).append(">").append(" ");
+                continue;
+            }
+
+            // Find the index
+            int startIndex = word.indexOf(url);
+            int endIndex = startIndex + url.length();
+
+            // Look for <
+            if (startIndex == 0) {
+                word = "<" + word;
+            } else {
+                if (word.charAt(startIndex - 1) != '<') {
+                    word = new StringBuilder(word).insert(startIndex - 1, "<").toString();
+                }
+            }
+
+            // Handle >
+            if (endIndex == word.length() - 1) {
+                word = word + ">";
+            } else {
+                if (word.charAt(endIndex + 1) != '>') {
+                    word = new StringBuilder(word).insert(endIndex + 1, ">").toString();
+                }
+            }
+            stringBuilder.append(word).append(" ");
+        }
 
         // Create the new document
-        Document updatedDocument = new Document().append("_id", ctx.getAuthor().getIdLong()).append("bio", newBio);
+        Document updatedDocument = new Document().append("_id", ctx.getAuthor().getIdLong()).append("bio", stringBuilder.toString().replace(" \n ", "\n"));
 
         // Insert if new
         Document document = db.find(Filters.eq("_id", ctx.getAuthor().getIdLong())).first();

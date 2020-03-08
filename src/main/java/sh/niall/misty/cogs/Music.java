@@ -1,10 +1,11 @@
 package sh.niall.misty.cogs;
 
+import com.linkedin.urls.Url;
+import com.linkedin.urls.detection.UrlDetector;
+import com.linkedin.urls.detection.UrlDetectorOptions;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.TextChannel;
 import org.apache.commons.lang3.StringUtils;
 import sh.niall.misty.audio.AudioGuild;
 import sh.niall.misty.audio.AudioGuildManager;
@@ -12,11 +13,12 @@ import sh.niall.misty.audio.TrackRequest;
 import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
 import sh.niall.misty.utils.audio.AudioUtils;
-import sh.niall.misty.utils.ui.Paginator;
+import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.commands.interfaces.Command;
 import sh.niall.yui.exceptions.CommandException;
+import sh.niall.yui.exceptions.WaiterException;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -68,15 +70,20 @@ public class Music extends Cog {
         AudioUtils.runSummon(audioGuildManager, ctx);
 
         // Setup the Query
-        String url = ctx.getArgsStripped().get(0);
+        String messageArgs = String.join(" ", ctx.getArgsStripped());
+        List<Url> urls = new UrlDetector(messageArgs, UrlDetectorOptions.Default).detect();
+        String queryString = urls.isEmpty() ? "ytsearch:" + messageArgs : urls.get(0).getFullUrl();
+        boolean usedSearch = urls.isEmpty();
         AudioGuild audioGuild = audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong());
 
         // Run the Query
-        List<AudioTrack> trackList = AudioUtils.runQuery(audioGuildManager.getAudioPlayerManager(), url, ctx.getGuild());
+        List<AudioTrack> trackList = AudioUtils.runQuery(audioGuildManager.getAudioPlayerManager(), queryString, ctx.getGuild());
 
         // Queue the music
         for (AudioTrack audioTrack : trackList) {
             audioGuild.addToQueue(new TrackRequest(audioTrack, ctx.getAuthor().getIdLong()));
+            if (usedSearch) // Only add the first found song
+                break;
         }
 
         // Play the music
@@ -84,7 +91,7 @@ public class Music extends Cog {
             audioGuild.play();
 
         // Inform the invoker
-        if (trackList.size() == 1)
+        if (trackList.size() == 1 || usedSearch)
             ctx.send("Added the song `" + trackList.get(0).getInfo().title + "` to the queue!");
         else
             ctx.send("Added `" + trackList.size() + "` songs to the queue!");
@@ -92,7 +99,6 @@ public class Music extends Cog {
 
     @Command(name = "pause")
     public void _commandPause(Context ctx) throws CommandException {
-        // TODO: Moderation override
         if (!AudioUtils.userInSameChannel(ctx))
             throw new CommandException("You can't pause the music as we're not in the same voice channel!");
 
@@ -110,7 +116,6 @@ public class Music extends Cog {
 
     @Command(name = "resume")
     public void _commandResume(Context ctx) throws CommandException {
-        // TODO: Moderation override
         if (!AudioUtils.userInSameChannel(ctx))
             throw new CommandException("You can't resume the music as we're not in the same voice channel!");
 
@@ -126,12 +131,8 @@ public class Music extends Cog {
         ctx.send("Resuming! The current song is: " + audioGuild.getCurrentSong().audioTrack.getInfo().title);
     }
 
-    /**
-     * Stops the music and disconnects the bot
-     */
     @Command(name = "stop")
     public void _commandStop(Context ctx) throws CommandException {
-        // TODO: Moderation override
         if (!AudioUtils.userInSameChannel(ctx))
             throw new CommandException("You can't stop the music as we're not in the same voice channel!");
 
@@ -141,7 +142,6 @@ public class Music extends Cog {
 
     @Command(name = "skip", aliases = {"s"})
     public void _commandSkip(Context ctx) throws CommandException {
-        // TODO: Moderation override
         if (!AudioUtils.userInSameChannel(ctx))
             throw new CommandException("You can't skip this song as we're not in the same voice channel!");
 
@@ -159,7 +159,6 @@ public class Music extends Cog {
 
     @Command(name = "skipto")
     public void _commandSkipTo(Context ctx) throws CommandException, AudioException {
-        // TODO: Moderation override
         if (!AudioUtils.userInSameChannel(ctx))
             throw new CommandException("You can't skip to a song as we're not in the same voice channel!");
 
@@ -184,7 +183,6 @@ public class Music extends Cog {
 
     @Command(name = "clear")
     public void _commandClear(Context ctx) throws CommandException {
-        // TODO: Moderation override
         if (!AudioUtils.userInSameChannel(ctx))
             throw new CommandException("You can't clear the queue because we're not in the same voice channel!");
 
@@ -211,7 +209,6 @@ public class Music extends Cog {
         }
 
         // We want to change the volume
-        // TODO: Moderation override
         if (!AudioUtils.userInSameChannel(ctx))
             throw new CommandException("You can't change the volume because we're not in the same voice channel!");
 
@@ -260,7 +257,6 @@ public class Music extends Cog {
 
     @Command(name = "loop")
     public void _commandLoop(Context ctx) throws CommandException {
-        // TODO: Moderation override
         if (!AudioUtils.userInSameChannel(ctx))
             throw new CommandException("You can't edit the loop setting because we're not in the same voice channel!");
 
@@ -277,7 +273,6 @@ public class Music extends Cog {
 
     @Command(name = "shuffle")
     public void _commandShuffle(Context ctx) throws CommandException {
-        // TODO: Moderation override
         if (!AudioUtils.userInSameChannel(ctx))
             throw new CommandException("You can't edit the shuffle setting because we're not in the same voice channel!");
 
@@ -360,7 +355,7 @@ public class Music extends Cog {
     }
 
     @Command(name = "queue", aliases = {"q"})
-    public void _commandQueue(Context ctx) throws CommandException {
+    public void _commandQueue(Context ctx) throws CommandException, WaiterException {
         if (!ctx.getGuild().getAudioManager().isConnected())
             throw new CommandException("There is no queue because I'm not in a voice channel");
 
@@ -370,6 +365,7 @@ public class Music extends Cog {
         if (queue.isEmpty())
             throw new CommandException("The queue is currently empty! Request a song :)");
 
+        long queueTotalTime = 0;
         List<EmbedBuilder> embedBuilders = new ArrayList<>();
         int trackNumber = 1;
         while (!queue.isEmpty()) {
@@ -392,28 +388,24 @@ public class Music extends Cog {
                 ));
                 added++;
                 trackNumber++;
+                queueTotalTime += trackRequest.audioTrack.getDuration();
             }
             embedBuilder.setDescription(builder.toString());
             embedBuilders.add(embedBuilder);
         }
 
-        // Add page numbers
-        List<MessageEmbed> output = new ArrayList<>();
-        int page = 1;
-        int total = embedBuilders.size();
-        for (EmbedBuilder embedBuilder : embedBuilders) {
-            embedBuilder.setFooter(String.format("Page %s of %s", page, total));
-            output.add(embedBuilder.build());
-            page++;
-        }
+        // Add page numbers and total time
+        String totalTimeString = "Total time remaining: " + AudioUtils.durationToString(queueTotalTime);
+        for (EmbedBuilder embedBuilder : embedBuilders)
+            embedBuilder.setDescription(totalTimeString);
 
-        Paginator paginator = new Paginator(getYui(), (TextChannel) ctx.getChannel(), output, 60);
+        // Run the paginator
+        Paginator paginator = new Paginator(ctx, embedBuilders, 160, true);
         paginator.run();
     }
 
     @Command(name = "removeduplicates")
     public void _commandRemoveDuplicates(Context ctx) throws CommandException {
-        // TODO: Moderation override
         if (!AudioUtils.userInSameChannel(ctx))
             throw new CommandException("You can't edit the queue because we're not in the same voice channel!");
 
@@ -425,7 +417,6 @@ public class Music extends Cog {
 
     @Command(name = "removeinactive")
     public void _commandRemoveInactive(Context ctx) throws CommandException, AudioException {
-        // TODO: Moderation override
         if (!AudioUtils.userInSameChannel(ctx))
             throw new CommandException("You can't edit the queue because we're not in the same voice channel!");
 

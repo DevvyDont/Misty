@@ -3,8 +3,6 @@ package sh.niall.misty.cogs;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
@@ -13,7 +11,7 @@ import sh.niall.misty.playlists.PlaylistUtils;
 import sh.niall.misty.tag.Tag;
 import sh.niall.misty.utils.cogs.MistyCog;
 import sh.niall.misty.utils.ui.Menu;
-import sh.niall.misty.utils.ui.Paginator;
+import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.commands.interfaces.Group;
 import sh.niall.yui.commands.interfaces.GroupCommand;
@@ -291,7 +289,7 @@ public class Tags extends MistyCog {
     }
 
     @GroupCommand(group = "tag", name = "list", aliases = {"l"})
-    public void _commandList(Context ctx) throws CommandException {
+    public void _commandList(Context ctx) throws CommandException, WaiterException {
         long targetId = ctx.getAuthor().getIdLong();
 
         // If they provided an argument, see if it's a possible target
@@ -344,17 +342,7 @@ public class Tags extends MistyCog {
             embedBuilderList.add(embedBuilder);
         }
 
-        // Add page numbers
-        List<MessageEmbed> output = new ArrayList<>();
-        int page = 1;
-        int total = embedBuilderList.size();
-        for (EmbedBuilder embedBuilder : embedBuilderList) {
-            embedBuilder.setFooter(String.format("Page %s of %s", page, total));
-            output.add(embedBuilder.build());
-            page++;
-        }
-
-        Paginator paginator = new Paginator(getYui(), (TextChannel) ctx.getChannel(), output, 60);
+        Paginator paginator = new Paginator(ctx, embedBuilderList, 160, false);
         paginator.run();
     }
 

@@ -47,6 +47,7 @@ public class Misty {
                 new Help(),
                 new Music(audioGuildManager),
                 new Playlists(audioGuildManager, songCache),
+                new Reminders(),
                 new Social(),
                 new Tags(),
                 new Utilities()

@@ -7,8 +7,6 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.TextChannel;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import sh.niall.misty.Misty;
@@ -28,7 +26,7 @@ import sh.niall.misty.utils.audio.AudioUtils;
 import sh.niall.misty.utils.cogs.MistyCog;
 import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.Menu;
-import sh.niall.misty.utils.ui.Paginator;
+import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.commands.interfaces.Group;
 import sh.niall.yui.commands.interfaces.GroupCommand;
@@ -439,7 +437,7 @@ public class Playlists extends MistyCog {
     }
 
     @GroupCommand(group = "playlist", name = "list", aliases = {"l"})
-    public void _commandList(Context ctx) throws CommandException, AudioException, MistyException, IOException {
+    public void _commandList(Context ctx) throws CommandException, AudioException, MistyException, IOException, WaiterException {
         PlaylistLookupContainer result = PlaylistUtils.getTargetAndName(ctx);
         List<EmbedBuilder> embedList = new ArrayList<>();
 
@@ -493,7 +491,6 @@ public class Playlists extends MistyCog {
                 throw new CommandException(String.format("Playlist %s has no songs!", playlist.friendlyName));
 
             while (!urls.isEmpty()) {
-
                 int added = 0;
                 EmbedBuilder embedBuilder = new EmbedBuilder();
                 embedBuilder.setTitle(String.format("**%s**", playlist.friendlyName));
@@ -519,17 +516,7 @@ public class Playlists extends MistyCog {
             }
         }
 
-        // Add page numbers
-        List<MessageEmbed> output = new ArrayList<>();
-        int page = 1;
-        int total = embedList.size();
-        for (EmbedBuilder embedBuilder : embedList) {
-            embedBuilder.setFooter(String.format("Page %s of %s", page, total));
-            output.add(embedBuilder.build());
-            page++;
-        }
-
-        Paginator paginator = new Paginator(getYui(), (TextChannel) ctx.getChannel(), output, 60);
+        Paginator paginator = new Paginator(ctx, embedList, 160, true);
         paginator.run();
     }
 
