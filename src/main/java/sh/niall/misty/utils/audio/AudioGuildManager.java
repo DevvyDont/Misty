@@ -1,4 +1,4 @@
-package sh.niall.misty.audio;
+package sh.niall.misty.utils.audio;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.VoiceChannel;
 import net.dv8tion.jda.api.managers.AudioManager;
+import sh.niall.misty.utils.audio.AudioGuild;
 import sh.niall.yui.Yui;
 import sh.niall.yui.exceptions.CommandException;
 

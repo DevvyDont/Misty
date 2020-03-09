@@ -1,4 +1,4 @@
-package sh.niall.misty.playlists.enums;
+package sh.niall.misty.utils.playlists.enums;
 
 public enum Permission {
     NONE,

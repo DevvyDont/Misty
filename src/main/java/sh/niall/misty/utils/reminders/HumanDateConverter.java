@@ -1,6 +1,5 @@
 package sh.niall.misty.utils.reminders;
 
-import sh.niall.misty.utils.time.Period;
 import sh.niall.yui.exceptions.CommandException;
 
 import java.time.*;
@@ -43,7 +42,7 @@ public class HumanDateConverter {
     int year = ldt.getYear();
     int month = ldt.getMonthValue();
     int day = ldt.getDayOfMonth();
-    sh.niall.misty.utils.time.Period period = sh.niall.misty.utils.time.Period.am;
+    TimePeriod timePeriod = TimePeriod.am;
     int hour = 0; // 12 hour
     int minute = ldt.getMinute();
     int second = ldt.getSecond();
@@ -191,9 +190,9 @@ public class HumanDateConverter {
 
     private void handlePeriod(String word) {
         if (word.equals("am"))
-            period = sh.niall.misty.utils.time.Period.am;
+            timePeriod = TimePeriod.am;
         else
-            period = sh.niall.misty.utils.time.Period.pm;
+            timePeriod = TimePeriod.pm;
     }
 
     private void handleTomorrow() throws CommandException {
@@ -402,7 +401,7 @@ public class HumanDateConverter {
         String hr24S = String.valueOf(toConvert);
         if (hr24S.length() == 1)
             hr24S = "0" + hr24S;
-        return Integer.parseInt(LocalTime.parse(hr24S + period.toString(), DateTimeFormatter.ofPattern("hha")).format(DateTimeFormatter.ofPattern("HH")));
+        return Integer.parseInt(LocalTime.parse(hr24S + timePeriod.toString(), DateTimeFormatter.ofPattern("hha")).format(DateTimeFormatter.ofPattern("HH")));
     }
 
     private void convertTo12HrAndSet(int toConvert) throws CommandException {
@@ -426,8 +425,8 @@ public class HumanDateConverter {
         Stream.of(yearPhrases, mondayPhrases, weekPhrases, dayPhrases, hourPhrases, minutePhrases, secondPhrases,
                 tomorrowPhrases, mondayPhrases, tuesdayPhrases, wednesdayPhrases, thursdayPhrases, fridayPhrases,
                 saturdayPhrases, sundayPhrases, otherKeywords).forEach(output::addAll);
-        output.add(Period.am.name());
-        output.add(Period.pm.name());
+        output.add(TimePeriod.am.name());
+        output.add(TimePeriod.pm.name());
         return output;
     }
 }

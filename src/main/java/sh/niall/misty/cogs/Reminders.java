@@ -11,7 +11,7 @@ import net.dv8tion.jda.api.entities.TextChannel;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import sh.niall.misty.Misty;
-import sh.niall.misty.utils.cogs.MistyCog;
+import sh.niall.misty.utils.misty.MistyCog;
 import sh.niall.misty.utils.reminders.HumanDateConverter;
 import sh.niall.misty.utils.reminders.RemindersPaginator;
 import sh.niall.misty.utils.ui.Helper;

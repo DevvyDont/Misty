@@ -1,11 +1,11 @@
-package sh.niall.misty.playlists;
+package sh.niall.misty.utils.playlists;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import sh.niall.misty.playlists.containers.PlaylistSong;
-import sh.niall.misty.playlists.enums.Permission;
+import sh.niall.misty.utils.playlists.containers.PlaylistSong;
+import sh.niall.misty.utils.playlists.enums.Permission;
 import sh.niall.yui.exceptions.CommandException;
 
 import java.util.*;

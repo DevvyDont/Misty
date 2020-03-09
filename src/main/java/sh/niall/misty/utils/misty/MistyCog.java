@@ -1,4 +1,4 @@
-package sh.niall.misty.utils.cogs;
+package sh.niall.misty.utils.misty;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;

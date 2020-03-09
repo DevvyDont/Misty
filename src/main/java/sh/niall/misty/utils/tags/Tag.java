@@ -1,4 +1,4 @@
-package sh.niall.misty.tag;
+package sh.niall.misty.utils.tags;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;

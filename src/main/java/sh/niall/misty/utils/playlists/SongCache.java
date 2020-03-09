@@ -1,4 +1,4 @@
-package sh.niall.misty.playlists;
+package sh.niall.misty.utils.playlists;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;

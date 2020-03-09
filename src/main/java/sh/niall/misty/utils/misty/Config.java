@@ -1,4 +1,4 @@
-package sh.niall.misty.utils.config;
+package sh.niall.misty.utils.misty;
 
 import java.util.List;
 
