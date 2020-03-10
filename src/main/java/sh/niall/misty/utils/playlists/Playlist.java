@@ -55,7 +55,7 @@ public class Playlist {
         // Get the document from the database
         Document document = db.find(Filters.and(Filters.eq("author", author), Filters.eq("searchName", searchName))).first();
         if (document == null)
-            throw new CommandException("I can't find playlist `" + friendlyName + "`");
+            throw new CommandException("I can't find playlist `" + searchName + "`");
 
         this.db = db;
         loadFromDocument(document);

@@ -7,14 +7,18 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.User;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import sh.niall.misty.Misty;
-import sh.niall.misty.utils.audio.AudioGuild;
-import sh.niall.misty.utils.audio.AudioGuildManager;
-import sh.niall.misty.utils.audio.helpers.TrackRequest;
 import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
+import sh.niall.misty.utils.audio.AudioGuild;
+import sh.niall.misty.utils.audio.AudioGuildManager;
+import sh.niall.misty.utils.audio.AudioUtils;
+import sh.niall.misty.utils.audio.helpers.TrackRequest;
+import sh.niall.misty.utils.misty.MistyCog;
 import sh.niall.misty.utils.playlists.Playlist;
 import sh.niall.misty.utils.playlists.PlaylistUtils;
 import sh.niall.misty.utils.playlists.SongCache;
@@ -22,8 +26,6 @@ import sh.niall.misty.utils.playlists.containers.PlaylistLookupContainer;
 import sh.niall.misty.utils.playlists.containers.PlaylistSong;
 import sh.niall.misty.utils.playlists.containers.PlaylistUrlsContainer;
 import sh.niall.misty.utils.playlists.enums.Permission;
-import sh.niall.misty.utils.audio.AudioUtils;
-import sh.niall.misty.utils.misty.MistyCog;
 import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.Menu;
 import sh.niall.misty.utils.ui.paginator.Paginator;
@@ -455,18 +457,13 @@ public class Playlists extends MistyCog {
             if (playlists.isEmpty())
                 throw new CommandException(String.format("I found no playlists by the user %s", PlaylistUtils.getTargetName(ctx, result.targetId)));
 
-            while (!playlists.isEmpty()) {
-                // Create the page
-                int added = 0;
+            for (List<Playlist> playlistList : ListUtils.partition(playlists, 5)) {
                 EmbedBuilder embedBuilder = new EmbedBuilder();
                 embedBuilder.setTitle(PlaylistUtils.getTargetName(ctx, result.targetId) + " Playlists!");
                 embedBuilder.setDescription("Showing playlists they own and can edit.");
                 embedBuilder.setColor(Color.GREEN);
 
-                // Add the playlists
-                while (!playlists.isEmpty() && added < 5) {
-                    added++;
-                    Playlist playlist = playlists.remove(0);
+                for (Playlist playlist : playlistList) {
                     String builder = playlist.description + "\n" +
                             "Songs: " + playlist.songList.size() + "\n" +
                             "Plays: " + playlist.plays + "\n" +
@@ -475,35 +472,32 @@ public class Playlists extends MistyCog {
                             "Role: " + StringUtils.capitalize(playlist.getUserPermission(result.targetId).toString().toLowerCase()) + "\n";
                     embedBuilder.addField(String.format("**%s**", playlist.friendlyName), builder, true);
                 }
-
-                // Add to the list of pages
                 embedList.add(embedBuilder);
             }
+
         } else { // Display the specified playlist
             // Get the playlist
             Playlist playlist = new Playlist(db, result.targetId, result.playlistName, Playlist.generateSearchName(result.playlistName));
             Permission permission = playlist.getUserPermission(ctx.getAuthor().getIdLong());
             if (permission.equals(Permission.NONE))
-                throw new CommandException("You are not allowed to view this playlist!");
+                throw new CommandException("I can't find playlist `" + playlist.searchName + "`");
 
+            // Make sure we have URLs to show
             List<String> urls = new ArrayList<>(playlist.songList.keySet());
             if (urls.isEmpty())
                 throw new CommandException(String.format("Playlist %s has no songs!", playlist.friendlyName));
 
-            while (!urls.isEmpty()) {
-                int added = 0;
+            // Create the embeds
+            User user = ctx.getBot().getUserById(playlist.author);
+            for (List<String> urlList : ListUtils.partition(new ArrayList<>(playlist.songList.keySet()), 6)) {
                 EmbedBuilder embedBuilder = new EmbedBuilder();
                 embedBuilder.setTitle(String.format("**%s**", playlist.friendlyName));
                 embedBuilder.setDescription(playlist.description);
                 embedBuilder.setColor(Color.PINK);
-                if (!playlist.image.isEmpty())
-                    embedBuilder.setThumbnail(playlist.image);
-                if (!PlaylistUtils.targetDoesntExist(ctx, playlist.author))
-                    embedBuilder.setAuthor(PlaylistUtils.getTargetName(ctx, playlist.author), null, ctx.getBot().getUserById(playlist.author).getEffectiveAvatarUrl());
+                embedBuilder.setThumbnail((playlist.image.isEmpty()) ? null : playlist.image);
+                embedBuilder.setAuthor(PlaylistUtils.getTargetName(ctx, playlist.author), null, (user == null) ? null : user.getEffectiveAvatarUrl());
 
-                while (!urls.isEmpty() && added < 6) {
-                    added++;
-                    String url = urls.remove(0);
+                for (String url : urlList) {
                     PlaylistSong playlistSong = playlist.songList.get(url);
                     AudioTrack audioTrack = songCache.getTrack(ctx.getGuild(), url);
                     String builder = "Duration: " + AudioUtils.durationToString(audioTrack.getInfo().length) + "\n" +
@@ -516,6 +510,7 @@ public class Playlists extends MistyCog {
             }
         }
 
+        // Run the paginator
         Paginator paginator = new Paginator(ctx, embedList, 160, true);
         paginator.run();
     }
