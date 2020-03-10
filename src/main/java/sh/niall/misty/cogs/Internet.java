@@ -121,7 +121,7 @@ public class Internet extends Cog {
             embedBuilder.addField("Definition:", jsonObject.getString("definition"), false);
             embedBuilder.addField("Example:", jsonObject.getString("example"), false);
             embedBuilder.addField("Author:", jsonObject.getString("author"), true);
-            embedBuilder.addField("Thumbs Up/Down", String.format("%s/%s", jsonObject.getInt("thumbs_up"), jsonObject.getInt("thumbs_down")), true);
+            embedBuilder.addField("Thumbs Up/Down", String.format("\uD83D\uDC4D %s \uD83D\uDC4E %s", jsonObject.getInt("thumbs_up"), jsonObject.getInt("thumbs_down")), true);
             embedBuilder.addField("Written on:", date.format(urbanOutput), true);
             embedBuilders.add(embedBuilder);
         }
