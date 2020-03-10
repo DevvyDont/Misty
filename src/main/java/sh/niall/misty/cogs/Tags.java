@@ -4,12 +4,13 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.User;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import sh.niall.misty.Misty;
+import sh.niall.misty.utils.misty.MistyCog;
 import sh.niall.misty.utils.playlists.PlaylistUtils;
 import sh.niall.misty.utils.tags.Tag;
-import sh.niall.misty.utils.misty.MistyCog;
 import sh.niall.misty.utils.ui.Menu;
 import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.commands.Context;
@@ -82,8 +83,7 @@ public class Tags extends MistyCog {
         Tag.validateBody(body);
 
         // Create the tag
-        Tag tag = new Tag(db, ctx.getGuild().getIdLong(), ctx.getAuthor().getIdLong(), friendlyName, body);
-        tag.save();
+        new Tag(db, ctx.getGuild().getIdLong(), ctx.getAuthor().getIdLong(), friendlyName, body).save();
 
         // Inform the invoker
         ctx.send(String.format("Tag `%s` created!", friendlyName));
@@ -94,12 +94,9 @@ public class Tags extends MistyCog {
         if (ctx.getArgsStripped().isEmpty())
             throw new CommandException("Please provide a tag to delete!");
 
-        // First get the name
+        // First get the tag
         String friendlyName = String.join(" ", ctx.getArgsStripped());
-        String searchName = Tag.generateSearchName(friendlyName);
-
-        // Get the tag
-        Tag tag = new Tag(db, ctx.getGuild().getIdLong(), searchName);
+        Tag tag = new Tag(db, ctx.getGuild().getIdLong(), Tag.generateSearchName(friendlyName));
 
         // Make sure the invoker is the owner
         if (ctx.getAuthor().getIdLong() != tag.author)
@@ -116,12 +113,10 @@ public class Tags extends MistyCog {
         embedBuilder.addField("Uses: ", String.valueOf(tag.uses), true);
 
         // Delete if confirmed
-        if (sendConfirmation(ctx, embedBuilder.build())) {
-            tag.delete();
-            ctx.send(String.format("Tag `%s` deleted!", tag.friendlyName));
-        } else {
+        if (sendConfirmation(ctx, embedBuilder.build()))
+            ctx.send(String.format("Tag `%s` deleted!", tag.delete().friendlyName));
+        else
             ctx.send(String.format("Okay! I won't delete tag %s", tag.friendlyName));
-        }
     }
 
     @GroupCommand(group = "tag", name = "edit", aliases = {"e"})
@@ -130,12 +125,9 @@ public class Tags extends MistyCog {
         if (ctx.getArgsStripped().isEmpty())
             throw new CommandException("Please provide the name of the tag you want to edit!");
 
-        // First get the name
-        String friendlyName = String.join(" ", ctx.getArgsStripped());
-        String searchName = Tag.generateSearchName(friendlyName);
-
         // Get the tag
-        Tag tag = new Tag(db, ctx.getGuild().getIdLong(), searchName);
+        String friendlyName = String.join(" ", ctx.getArgsStripped());
+        Tag tag = new Tag(db, ctx.getGuild().getIdLong(), Tag.generateSearchName(friendlyName));
 
         // Make sure the invoker is the owner
         if (ctx.getAuthor().getIdLong() != tag.author)
@@ -290,9 +282,8 @@ public class Tags extends MistyCog {
 
     @GroupCommand(group = "tag", name = "list", aliases = {"l"})
     public void _commandList(Context ctx) throws CommandException, WaiterException {
-        long targetId = ctx.getAuthor().getIdLong();
-
         // If they provided an argument, see if it's a possible target
+        long targetId = ctx.getAuthor().getIdLong();
         if (!ctx.getArgsStripped().isEmpty()) {
             String possibleTarget = ctx.getArgsStripped().get(0).replace("<@!", "").replace("<@", "").replace(">", "");
             int length = possibleTarget.length();
@@ -306,42 +297,31 @@ public class Tags extends MistyCog {
         for (Document document : db.find(Filters.or(Filters.eq("author", targetId), Filters.eq("guild", ctx.getGuild().getIdLong())))) {
             tags.add(new Tag(db, document));
         }
-
         if (tags.isEmpty())
             throw new CommandException(String.format("%s has no tags!", PlaylistUtils.getTargetName(ctx, targetId)));
 
         // Getting information for the pages
         List<EmbedBuilder> embedBuilderList = new ArrayList<>();
+        EmbedBuilder embedBuilderMaster = new EmbedBuilder();
+        User targetUser = ctx.getBot().getUserById(targetId);
         String targetName = PlaylistUtils.getTargetName(ctx, targetId);
-        boolean inGuild = ctx.getGuild().getMemberById(targetId) != null;
-        boolean canSee = ctx.getBot().getUserById(targetId) != null;
-        String imageUrl = null;
-        if (canSee)
-            imageUrl = ctx.getBot().getUserById(targetId).getEffectiveAvatarUrl();
+        embedBuilderMaster.setTitle(String.format("%s's tags!", targetName));
+        embedBuilderMaster.setAuthor(targetName, null, (targetUser != null) ? targetUser.getEffectiveAvatarUrl() : null);
+        String baseDesc = String.format("Showing tags they own.\nThey currently have %s tags! %s", tags.size(),
+                (ctx.getGuild().getMemberById(targetId) == null) ? "\nAs they're not in this server currently, you can claim their tags." : "");
 
-        while (!tags.isEmpty()) {
-
-            int added = 0;
-            EmbedBuilder embedBuilder = new EmbedBuilder();
-            embedBuilder.setTitle(String.format("%s's tags!", targetName));
-            if (canSee)
-                embedBuilder.setAuthor(targetName, null, imageUrl);
-
-            StringBuilder builder = new StringBuilder();
-            builder.append(String.format("Showing tags they own.\nThey currently have %s tags! ", tags.size()));
-            if (!inGuild)
-                builder.append("\nAs they're not in this server currently, you can claim their tags.");
-            builder.append("\n\n");
-
-            while (!tags.isEmpty() && added < 10) {
-                added++;
-                Tag tag = tags.remove(0);
-                builder.append(String.format("- %s\n", tag.searchName));
+        // Loop through tags and add them to the desc
+        for (List<Tag> tagList : ListUtils.partition(tags, 10)) {
+            EmbedBuilder embedBuilder = new EmbedBuilder(embedBuilderMaster);
+            StringBuilder stringBuilder = new StringBuilder(baseDesc);
+            for (Tag tag : tagList) {
+                stringBuilder.append(String.format("- %s\n", tag.searchName));
             }
-            embedBuilder.setDescription(builder.toString());
+            embedBuilder.setDescription(stringBuilder.toString());
             embedBuilderList.add(embedBuilder);
         }
 
+        // Run the paginator
         Paginator paginator = new Paginator(ctx, embedBuilderList, 160, false);
         paginator.run();
     }

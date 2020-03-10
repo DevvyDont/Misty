@@ -90,7 +90,7 @@ public class Tag {
      *
      * @throws CommandException Thrown if a tag already exists when inserting a new tag
      */
-    public void save() throws CommandException {
+    public Tag save() throws CommandException {
         Document document = new Document();
 
         if (originalDocument == null) {
@@ -135,14 +135,15 @@ public class Tag {
 
             db.updateOne(Filters.eq("_id", objectId), new Document("$set", document));
         }
+        return this;
     }
 
     /**
      * Deletes the tag from the database
      */
-    public void delete() {
+    public Tag delete() {
         db.deleteOne(Filters.eq("_id", originalDocument.get("_id", ObjectId.class)));
-
+        return this;
     }
 
     /**
