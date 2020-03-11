@@ -9,8 +9,8 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import sh.niall.misty.Misty;
-import sh.niall.misty.playlists.PlaylistUtils;
-import sh.niall.misty.utils.cogs.MistyCog;
+import sh.niall.misty.utils.misty.MistyCog;
+import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.commands.interfaces.Group;
 import sh.niall.yui.commands.interfaces.GroupCommand;
@@ -45,7 +45,7 @@ public class Social extends MistyCog {
             if (target == ctx.getAuthor().getIdLong())
                 throw new CogException("You don't have a bio set!");
             else
-                throw new CogException(String.format("%s doesn't have a bio set!", PlaylistUtils.getTargetName(ctx, target)));
+                throw new CogException(String.format("%s doesn't have a bio set!", UserSettings.getName(ctx, target)));
         }
 
         // Post the bio

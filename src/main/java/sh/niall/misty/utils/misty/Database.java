@@ -1,4 +1,4 @@
-package sh.niall.misty.utils.database;
+package sh.niall.misty.utils.misty;
 
 
 import com.mongodb.MongoClient;

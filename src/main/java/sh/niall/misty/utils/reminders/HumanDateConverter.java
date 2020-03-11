@@ -1,11 +1,13 @@
 package sh.niall.misty.utils.reminders;
 
-import sh.niall.misty.utils.time.Period;
+import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.yui.exceptions.CommandException;
 
-import java.time.*;
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.time.Month;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -37,30 +39,25 @@ public class HumanDateConverter {
             Map.entry("oct", Month.OCTOBER), Map.entry("nov", Month.NOVEMBER), Map.entry("dec", Month.DECEMBER)));
     static Set<String> keywords = returnKeywordSet();
 
-    ZoneOffset zoneOffset = ZoneOffset.UTC;
-    LocalDateTime ldt = LocalDateTime.now(zoneOffset);
     List<String> foundKeywords = new ArrayList<>();
-    int year = ldt.getYear();
-    int month = ldt.getMonthValue();
-    int day = ldt.getDayOfMonth();
-    sh.niall.misty.utils.time.Period period = sh.niall.misty.utils.time.Period.am;
-    int hour = 0; // 12 hour
-    int minute = ldt.getMinute();
-    int second = ldt.getSecond();
+    UserSettings userSettings;
+    ZonedDateTime zonedDateTime;
+    ZonedDateTime originalZonedDateTime;
 
     /**
      * Parses the string from human speak to a utc timestamp
      *
      * @param toParse the string to parse
      */
-    public HumanDateConverter(String toParse) throws CommandException {
+    public HumanDateConverter(UserSettings userSettings, String toParse) throws CommandException {
+        this.userSettings = userSettings;
+        zonedDateTime = ZonedDateTime.now(userSettings.timezone);
+        originalZonedDateTime = zonedDateTime;
+
         // First sanitise the input
         sanitiseInput(toParse);
         if (foundKeywords.isEmpty())
             throw new CommandException("No words were found!");
-
-        // Setup hour
-        convertTo12HrAndSet(ldt.getHour());
 
         // Set up for search
         List<Integer> periodIndexes = new ArrayList<>();
@@ -106,10 +103,6 @@ public class HumanDateConverter {
                 secondIndexes.add(currentIndex);
         }
 
-        // Run the methods
-        if (!periodIndexes.isEmpty())
-            handlePeriod(foundKeywords.get(periodIndexes.get(0)));
-
         if (tomorrowExists)
             handleTomorrow();
 
@@ -122,8 +115,22 @@ public class HumanDateConverter {
         if (!atIndexes.isEmpty())
             handleAt(atIndexes);
 
+        if (!periodIndexes.isEmpty())
+            handlePeriod(foundKeywords.get(periodIndexes.get(0)));
+
         if (!yearIndexes.isEmpty() || !monthIndexes.isEmpty() || !weekIndexes.isEmpty() || !dayIndexes.isEmpty() || !hourIndexes.isEmpty() || !minuteIndexes.isEmpty() || !secondIndexes.isEmpty())
             handleUnit(yearIndexes, monthIndexes, weekIndexes, dayIndexes, hourIndexes, minuteIndexes, secondIndexes);
+    }
+
+    private void handlePeriod(String word) {
+        // First get the current hour into 12 hour time
+        int ogHour = zonedDateTime.getHour();
+        String hour = ((int) (Math.log10(ogHour) + 1) == 1) ? "0" + ogHour : String.valueOf(ogHour);
+        String result = LocalTime.parse(hour, DateTimeFormatter.ofPattern("HH")).format(DateTimeFormatter.ofPattern("hh"));
+
+        // Convert back to 24 hour
+        int hour24 = Integer.parseInt(LocalTime.parse(result + word, DateTimeFormatter.ofPattern("hha")).format(DateTimeFormatter.ofPattern("HH")));
+        setTime(hour24, zonedDateTime.getMinute(), zonedDateTime.getSecond());
     }
 
     private void handleUnit(List<Integer> yearIndexes, List<Integer> monthIndexes, List<Integer> weekIndexes, List<Integer> dayIndexes, List<Integer> hourIndexes, List<Integer> minuteIndexes, List<Integer> secondIndexes) throws CommandException {
@@ -180,30 +187,12 @@ public class HumanDateConverter {
         if (total == 0)
             return;
 
-        LocalDateTime localDateTime = LocalDateTime.of(year, month, day, covertTo24Hr(hour), minute, second).plus(total, ChronoUnit.SECONDS);
-        setYear(localDateTime.getYear());
-        setMonth(localDateTime.getMonthValue());
-        setDay(localDateTime.getDayOfMonth());
-        convertTo12HrAndSet(localDateTime.getHour());
-        setMinute(localDateTime.getMinute());
-        setSecond(localDateTime.getSecond());
+        zonedDateTime = zonedDateTime.plusSeconds(total);
     }
 
-    private void handlePeriod(String word) {
-        if (word.equals("am"))
-            period = sh.niall.misty.utils.time.Period.am;
-        else
-            period = sh.niall.misty.utils.time.Period.pm;
-    }
-
-    private void handleTomorrow() throws CommandException {
-        LocalDateTime nextDay = ldt.plusDays(1);
-        setYear(nextDay.getYear());
-        setMonth(nextDay.getMonthValue());
-        setDay(nextDay.getDayOfMonth());
-        setHour(9);
-        setMinute(0);
-        setSecond(0);
+    private void handleTomorrow() {
+        zonedDateTime = zonedDateTime.plusDays(1);
+        setTime(9, 0, 0);
     }
 
     private void handleAt(List<Integer> indexes) throws CommandException {
@@ -211,27 +200,22 @@ public class HumanDateConverter {
             try {
                 String possibleTime = foundKeywords.get(index + 1);
                 if (possibleTime.contains(":")) {
-                    try {
-                        String[] splitString = possibleTime.split(":");
-                        setHour(Integer.parseInt(splitString[0]));
-                        setMinute(Integer.parseInt(splitString[1]));
-                        setSecond(Integer.parseInt(splitString[2]));
+                    String[] splitString = possibleTime.split(":");
+                    if (splitString.length == 2) {
+                        setTime(Integer.parseInt(splitString[0]), Integer.parseInt(splitString[1]), 0);
                         return;
-                    } catch (ArrayIndexOutOfBoundsException ignored) {
+                    } else if (splitString.length > 2) {
+                        setTime(Integer.parseInt(splitString[0]), Integer.parseInt(splitString[1]), Integer.parseInt(splitString[2]));
                         return;
                     }
                 } else if (possibleTime.equals("midday")) {
-                    setHour(12);
-                    setMinute(0);
-                    setSecond(0);
+                    setTime(12, 0, 0);
                     return;
                 } else if (possibleTime.equals("midnight")) {
-                    setHour(0);
-                    setMinute(0);
-                    setSecond(0);
+                    setTime(0, 0, 0);
                     return;
                 } else {
-                    setHour(Integer.parseInt(possibleTime));
+                    setTime(Integer.parseInt(possibleTime), 0, 0);
                     return;
                 }
             } catch (NumberFormatException | IndexOutOfBoundsException ignored) {
@@ -260,16 +244,12 @@ public class HumanDateConverter {
             // Check if it matches a date format eg 10/10/2020
             if (possibleDate.matches("^([0-2][0-9]|(3)[0-1])(/)(((0)[0-9])|((1)[0-2]))(/)(\\d{4}|\\d{2})$")) {
                 String[] splitDate = possibleDate.split("/");
-                setDay(Integer.parseInt(splitDate[0]));
-                setMonth(Integer.parseInt(splitDate[1]));
-                handleYear(splitDate[2]);
+                setDate(Integer.parseInt(splitDate[0]), Integer.parseInt(splitDate[1]), Integer.parseInt(splitDate[2]));
 
                 // Check for long form date
             } else if (possibleDate.matches("\\d+")) {
-                setDay(Integer.parseInt(possibleDate));
-                setHour(9);
-                setMinute(0);
-                setSecond(0);
+                setDate(Integer.parseInt(possibleDate), zonedDateTime.getMonthValue(), zonedDateTime.getYear());
+                setTime(9, 0, 0);
                 if (foundKeywords.size() <= index + 2)
                     continue;
 
@@ -278,7 +258,10 @@ public class HumanDateConverter {
                 {
                     for (Map.Entry<String, Month> monthEntry : monthMap.entrySet()) {
                         if (possibleMonth.startsWith(monthEntry.getKey())) {
-                            handleMonth(monthEntry.getValue());
+                            if (monthEntry.getValue().getValue() < zonedDateTime.getMonthValue())
+                                setDate(zonedDateTime.getDayOfMonth(), monthEntry.getValue().getValue(), zonedDateTime.getYear() + 1);
+                            else
+                                setDate(zonedDateTime.getDayOfMonth(), monthEntry.getValue().getValue(), zonedDateTime.getYear());
                             break found;
                         }
                     }
@@ -287,7 +270,7 @@ public class HumanDateConverter {
 
                 // Check if year was provided
                 if (foundKeywords.size() > index + 3 && foundKeywords.get(index + 3).matches("(\\d{4}|\\d{2})"))
-                    handleYear(foundKeywords.get(index + 3));
+                    setDate(zonedDateTime.getDayOfMonth(), zonedDateTime.getMonthValue(), Integer.parseInt(foundKeywords.get(index + 3)));
             } else {
                 // Check if
                 try {
@@ -296,21 +279,6 @@ public class HumanDateConverter {
                 }
             }
         }
-    }
-
-    private void handleYear(String year) throws CommandException {
-        if (year.length() == 2)
-            setYear(Integer.parseInt(String.valueOf(ldt.getYear()).substring(0, 2) + year));
-        else
-            setYear(Integer.parseInt(year));
-    }
-
-    private void handleMonth(Month month) throws CommandException {
-        if (month.getValue() < ldt.getMonthValue())
-            setYear(ldt.getYear() + 1);
-        else
-            setYear(ldt.getYear());
-        setMonth(month.getValue());
     }
 
     private void handleDayOfWeek(String dayString) throws CommandException {
@@ -333,13 +301,8 @@ public class HumanDateConverter {
         else
             throw new CommandException("Invalid day of the week provided!");
 
-        LocalDateTime next = ldt.with(TemporalAdjusters.next(day));
-        setYear(next.getYear());
-        setMonth(next.getMonthValue());
-        setDay(next.getDayOfMonth());
-        setHour(9);
-        setMinute(0);
-        setSecond(0);
+        zonedDateTime = zonedDateTime.with(TemporalAdjusters.next(day));
+        setTime(9, 0, 0);
     }
 
     private void sanitiseInput(String input) {
@@ -362,63 +325,51 @@ public class HumanDateConverter {
         }
     }
 
-    private void setYear(int year) throws CommandException {
-        if (year < ldt.getYear())
-            throw new CommandException("Year in the past was specified!");
-        this.year = year;
+    private void setDate(int day, int month, int year) {
+        String yr = String.valueOf(year);
+        switch (yr.length()) {
+            case 1:
+                year = Integer.parseInt(String.valueOf(zonedDateTime.getYear()).substring(0, 3) + yr);
+                break;
+            case 2:
+                year = Integer.parseInt(String.valueOf(zonedDateTime.getYear()).substring(0, 2) + yr);
+                break;
+        }
+        zonedDateTime = ZonedDateTime.of(
+                year,
+                month,
+                day,
+                zonedDateTime.getHour(),
+                zonedDateTime.getMinute(),
+                zonedDateTime.getSecond(),
+                zonedDateTime.getNano(),
+                userSettings.timezone
+        );
     }
 
-    private void setMonth(int month) throws CommandException {
-        if (12 < month || month < 1)
-            throw new CommandException("Month specified doesn't exist!");
-        this.month = month;
-    }
-
-    private void setDay(int day) throws CommandException {
-        if (31 < day || day < 1)
-            throw new CommandException("Day specified doesn't exist!");
-        this.day = day;
-    }
-
-    private void setHour(int hour) throws CommandException {
-        if (12 < hour || hour < 1)
-            throw new CommandException("Hour specified doesn't exist!");
-        this.hour = hour;
-    }
-
-    private void setMinute(int minute) throws CommandException {
-        if (59 < minute || minute < 0)
-            throw new CommandException("Minute specified doesn't exist!");
-        this.minute = minute;
-    }
-
-    private void setSecond(int second) throws CommandException {
-        if (59 < minute || minute < 0)
-            throw new CommandException("Second specified doesn't exist!");
-        this.second = second;
-    }
-
-    private int covertTo24Hr(int toConvert) {
-        String hr24S = String.valueOf(toConvert);
-        if (hr24S.length() == 1)
-            hr24S = "0" + hr24S;
-        return Integer.parseInt(LocalTime.parse(hr24S + period.toString(), DateTimeFormatter.ofPattern("hha")).format(DateTimeFormatter.ofPattern("HH")));
-    }
-
-    private void convertTo12HrAndSet(int toConvert) throws CommandException {
-        String hr24S = String.valueOf(toConvert);
-        if (hr24S.length() == 1)
-            hr24S = "0" + hr24S;
-        LocalTime localTime = LocalTime.parse(hr24S, DateTimeFormatter.ofPattern("HH"));
-        setHour(Integer.parseInt(localTime.format(DateTimeFormatter.ofPattern("hh"))));
-        handlePeriod(localTime.format(DateTimeFormatter.ofPattern("a")));
+    private void setTime(int hour, int minute, int second) {
+        zonedDateTime = ZonedDateTime.of(
+                zonedDateTime.getYear(),
+                zonedDateTime.getMonthValue(),
+                zonedDateTime.getDayOfMonth(),
+                hour,
+                minute,
+                second,
+                0,
+                userSettings.timezone
+        );
     }
 
     public long toTimestamp() throws CommandException {
-        LocalDateTime newDateTime = LocalDateTime.of(year, month, day, covertTo24Hr(hour), minute, second);
-        if (!newDateTime.equals(ldt))
-            return newDateTime.toEpochSecond(zoneOffset);
-        throw new CommandException("Please specify when to remind you!");
+        if (originalZonedDateTime.equals(zonedDateTime))
+            throw new CommandException("Please specify when to remind you!");
+        return zonedDateTime.toEpochSecond();
+    }
+
+    public ZonedDateTime toZonedDateTime() throws CommandException {
+        if (originalZonedDateTime.equals(zonedDateTime))
+            throw new CommandException("Please specify when to remind you!");
+        return zonedDateTime;
     }
 
     private static Set<String> returnKeywordSet() {
@@ -426,8 +377,8 @@ public class HumanDateConverter {
         Stream.of(yearPhrases, mondayPhrases, weekPhrases, dayPhrases, hourPhrases, minutePhrases, secondPhrases,
                 tomorrowPhrases, mondayPhrases, tuesdayPhrases, wednesdayPhrases, thursdayPhrases, fridayPhrases,
                 saturdayPhrases, sundayPhrases, otherKeywords).forEach(output::addAll);
-        output.add(Period.am.name());
-        output.add(Period.pm.name());
+        output.add("am");
+        output.add("pm");
         return output;
     }
 }

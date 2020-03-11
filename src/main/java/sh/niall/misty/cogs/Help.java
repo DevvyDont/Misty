@@ -12,9 +12,10 @@ public class Help extends Cog {
     HashMap<String, String> commands = new HashMap<>();
 
     public Help() {
-        // Animals
+        // Internet
         commands.put("dog", "Posts a photo/video of a dog.");
         commands.put("cat", "Posts a photo of a cat.");
+        commands.put("urbandictionary", "Search for a word on Urban Dictionary. Alias: ud, urban. Example: ud hello world");
 
         // Music
         commands.put("summon", "Summons the bot to your voice channel.");
@@ -44,6 +45,10 @@ public class Help extends Cog {
         commands.put("playlist list", "Lists a users playlist or displays a playlist. Usage: playlist list @Misty or playlist list my new playlist");
         commands.put("playlist play", "Adds the playlists songs to the music queue. Usage: playlist play my new playlist");
 
+        // Reminders
+        commands.put("remind", "Sets a new reminder. Example: remind me in 2 days to wash my car. remind me on the 24th to phone Jeff.");
+        commands.put("remind list", "Shows all of your current reminders");
+
         // Bio
         commands.put("bio", "Show a users bio. Usage: bio or bio @Misty");
         commands.put("bio set", "Sets your bio. Usage: bio set bio-here");
@@ -61,6 +66,7 @@ public class Help extends Cog {
         // Utils
         commands.put("avatar", "Gets the users avatar. Usage: avatar or avatar @Misty");
         commands.put("screenshare", "Gets the screen share link for the invokers voice call.");
+        commands.put("settings", "Changes your personal Misty settings.");
     }
 
     @Command(name = "help")
@@ -79,13 +85,18 @@ public class Help extends Cog {
 
         switch (helpString) {
             case "animals":
-                ctx.send(String.format("**Animals:**\n```%s```", getAnimals()));
+            case "internet":
+                ctx.send(String.format("**Internet:**\n```%s```", getInternet()));
                 return;
             case "music":
                 ctx.send(String.format("**Music:**\n```%s```", getMusic()));
                 return;
             case "playlist":
                 ctx.send(String.format("**Playlists:**\n```%s```", getPlaylist()));
+                return;
+            case "reminders":
+            case "remind":
+                ctx.send(String.format("**Reminders:**\n```%s```", getReminders()));
                 return;
             case "bio":
                 ctx.send(String.format("**Bios:**\n```%s```", getBios()));
@@ -101,7 +112,7 @@ public class Help extends Cog {
     }
 
     private String getUtilities() {
-        return formatCommand("avatar") + formatCommand("screenshare");
+        return formatCommand("avatar") + formatCommand("screenshare") + formatCommand("settings");
     }
 
     private String getBios() {
@@ -118,6 +129,16 @@ public class Help extends Cog {
         StringBuilder builder = new StringBuilder();
         for (String command : commands.keySet()) {
             if (!command.startsWith("tag"))
+                continue;
+            builder.append(formatCommand(command));
+        }
+        return builder.toString();
+    }
+
+    private String getReminders() {
+        StringBuilder builder = new StringBuilder();
+        for (String command : commands.keySet()) {
+            if (!command.startsWith("remind"))
                 continue;
             builder.append(formatCommand(command));
         }
@@ -154,12 +175,12 @@ public class Help extends Cog {
                 formatCommand("removeinactive");
     }
 
-    private String getAnimals() {
-        return formatCommand("dog") + formatCommand("cat");
+    private String getInternet() {
+        return formatCommand("dog") + formatCommand("cat") + formatCommand("urbandictionary");
     }
 
     private void postAll(Context ctx) {
-        ctx.send(String.format("**Animals:**\n```%s```", getAnimals()));
+        ctx.send(String.format("**Internet:**\n```%s```", getInternet()));
         ctx.send(String.format("**Music:**\n```%s```", getMusic()));
         ctx.send(String.format("**Playlists:**\n```%s```", getPlaylist()));
         ctx.send(String.format("**Bios:**\n```%s```", getBios()) + String.format("**Tags:**\n```%s```", getTags()) + String.format("**Utilities:**\n```%s```", getUtilities()));

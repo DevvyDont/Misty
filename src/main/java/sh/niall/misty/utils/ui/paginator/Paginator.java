@@ -25,7 +25,7 @@ public class Paginator {
     protected Context ctx;
     protected List<EmbedBuilder> pages;
     protected int currentPage = 0;
-    protected List<PaginatorOption> options = new ArrayList<>(Arrays.asList(new NextPageButton(this), new PreviousPageButton(this)));
+    protected List<PaginatorOption> options = new ArrayList<>(Arrays.asList(new PreviousPageButton(this), new NextPageButton(this)));
     private boolean anyoneCanUse;
 
     // Post message sent items
@@ -89,6 +89,7 @@ public class Paginator {
             return;
         }
         MessageReaction reaction = event.getReaction();
+        reaction.removeReaction(ctx.getUser()).queue();
         String reactionEmoji = reaction.getReactionEmote().getEmoji();
         for (PaginatorOption option : options) {
             if (option.equals(reactionEmoji))

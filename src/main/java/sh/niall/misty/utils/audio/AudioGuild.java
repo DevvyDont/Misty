@@ -1,4 +1,4 @@
-package sh.niall.misty.audio;
+package sh.niall.misty.utils.audio;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
@@ -15,6 +15,8 @@ import org.bson.Document;
 import sh.niall.misty.Misty;
 import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.ErrorHandler;
+import sh.niall.misty.utils.audio.helpers.SendHandler;
+import sh.niall.misty.utils.audio.helpers.TrackRequest;
 import sh.niall.yui.Yui;
 import sh.niall.yui.exceptions.CommandException;
 

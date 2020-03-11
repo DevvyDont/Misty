@@ -1,4 +1,4 @@
-package sh.niall.misty.playlists.containers;
+package sh.niall.misty.utils.playlists.containers;
 
 import com.linkedin.urls.Url;
 

@@ -1,10 +1,11 @@
-package sh.niall.misty.utils.cogs;
+package sh.niall.misty.utils.misty;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
+import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.exceptions.CommandException;
@@ -28,8 +29,8 @@ public class MistyCog extends Cog {
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Confirmation!");
         embedBuilder.setDescription(question);
-        embedBuilder.setColor(Color.ORANGE);
-        embedBuilder.setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
+        embedBuilder.setColor(Color.YELLOW);
+        embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
         return sendConfirmation(ctx, embedBuilder.build());
     }
 

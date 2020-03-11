@@ -1,12 +1,10 @@
-package sh.niall.misty.playlists;
+package sh.niall.misty.utils.playlists;
 
 import com.linkedin.urls.Url;
 import com.linkedin.urls.detection.UrlDetector;
 import com.linkedin.urls.detection.UrlDetectorOptions;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.User;
-import sh.niall.misty.playlists.containers.PlaylistLookupContainer;
-import sh.niall.misty.playlists.containers.PlaylistUrlsContainer;
+import sh.niall.misty.utils.playlists.containers.PlaylistLookupContainer;
+import sh.niall.misty.utils.playlists.containers.PlaylistUrlsContainer;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.exceptions.CommandException;
 
@@ -64,25 +62,6 @@ public class PlaylistUtils {
 
         if (!description.equals(description.replaceAll(" +", " ")))
             throw new CommandException("Playlist names can't have multiple spaces!");
-    }
-
-    /**
-     * Returns the targets name or unknown user if they can't be found
-     *
-     * @param ctx The command context
-     * @param id  The target ID
-     * @return The targets name
-     */
-    public static String getTargetName(Context ctx, long id) {
-        Member member = ctx.getGuild().getMemberById(id);
-        if (member != null)
-            return member.getEffectiveName();
-
-        User user = ctx.getBot().getUserById(id);
-        if (user != null)
-            return user.getName() + "#" + user.getDiscriminator();
-
-        return "Unknown User (" + id + ")";
     }
 
     /**

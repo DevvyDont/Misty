@@ -6,13 +6,17 @@ import com.linkedin.urls.detection.UrlDetectorOptions;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.User;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
-import sh.niall.misty.audio.AudioGuild;
-import sh.niall.misty.audio.AudioGuildManager;
-import sh.niall.misty.audio.TrackRequest;
 import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
+import sh.niall.misty.utils.audio.AudioGuild;
+import sh.niall.misty.utils.audio.AudioGuildManager;
 import sh.niall.misty.utils.audio.AudioUtils;
+import sh.niall.misty.utils.audio.helpers.TrackRequest;
+import sh.niall.misty.utils.settings.UserSettings;
+import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
@@ -21,6 +25,7 @@ import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.WaiterException;
 
 import java.awt.*;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -242,13 +247,14 @@ public class Music extends Cog {
                 AudioUtils.durationToString(trackRequest.audioTrack.getDuration())
         );
         Member requester = ctx.getGuild().getMemberById(trackRequest.requestAuthor);
+        // TODO fix this
 
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Now Playing!", trackRequest.audioTrack.getInfo().uri);
         embedBuilder.setDescription("From " + StringUtils.capitalize(trackRequest.audioTrack.getSourceManager().getSourceName()));
         embedBuilder.setImage(audioGuild.getArtwork());
-        embedBuilder.setColor(Color.PINK);
-        embedBuilder.setAuthor("Requested by: " + requester.getEffectiveName(), null, requester.getUser().getEffectiveAvatarUrl());
+        embedBuilder.setColor(Helper.randomColor());
+        embedBuilder.setAuthor("Requested by: " + UserSettings.getName(ctx, trackRequest.requestAuthor), null, requester.getUser().getEffectiveAvatarUrl());
         embedBuilder.addField("Title:", trackRequest.audioTrack.getInfo().title, true);
         embedBuilder.addField("Duration:", duration, false);
         embedBuilder.addField("Volume:", audioGuild.getVolume() + "%", true);
@@ -356,45 +362,51 @@ public class Music extends Cog {
 
     @Command(name = "queue", aliases = {"q"})
     public void _commandQueue(Context ctx) throws CommandException, WaiterException {
+        // Check if the bot is connected
         if (!ctx.getGuild().getAudioManager().isConnected())
             throw new CommandException("There is no queue because I'm not in a voice channel");
 
+        // Check if there's songs currently in the queue
         AudioGuild audioGuild = audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong());
-        List<TrackRequest> queue = new ArrayList<>(audioGuild.getQueue());
+        if (audioGuild.getQueue().isEmpty())
+            throw new CommandException("The queue is currently empty, request a song!");
 
-        if (queue.isEmpty())
-            throw new CommandException("The queue is currently empty! Request a song :)");
-
-        long queueTotalTime = 0;
+        // Setup the song loop
         List<EmbedBuilder> embedBuilders = new ArrayList<>();
+        long queueTotalTime = 0;
         int trackNumber = 1;
-        while (!queue.isEmpty()) {
+        Color embedColor = Helper.randomColor();
 
-            int added = 0;
+        // Loop over all the songs and add them to the queue
+        for (List<TrackRequest> requests : ListUtils.partition(new ArrayList<>(audioGuild.getQueue()), 5)) {
             EmbedBuilder embedBuilder = new EmbedBuilder();
             embedBuilder.setTitle("Music Queue");
-            embedBuilder.setColor(Color.CYAN);
+            embedBuilder.setColor(embedColor);
             StringBuilder builder = new StringBuilder();
+            for (TrackRequest request : requests) {
+                // Request user
+                User user = getYui().getJda().getUserById(request.requestAuthor);
+                String requester = (user != null) ? user.getAsMention() : "Unknown User";
 
-            while (!queue.isEmpty() && added < 5) {
-                TrackRequest trackRequest = queue.remove(0);
-                builder.append(String.format(
-                        "**%s. %s**\nRequested by: %s\nLength: %s\nUrl: %s\n\n",
-                        trackNumber,
-                        trackRequest.audioTrack.getInfo().title,
-                        getYui().getJda().getUserById(trackRequest.requestAuthor).getAsMention(),
-                        AudioUtils.durationToString(trackRequest.audioTrack.getDuration()),
-                        trackRequest.audioTrack.getInfo().uri
-                ));
-                added++;
+                // Add the song to the builder (Looks neater than using fields)
+                builder.append(String.format("**%s. %s**\n", trackNumber, request.audioTrack.getInfo().title));
+                builder.append(String.format("Requested by: %s\n", requester));
+                builder.append(String.format("Length: %s\n", AudioUtils.durationToString(request.audioTrack.getDuration())));
+                builder.append(String.format("Url: %s\n\n", request.audioTrack.getInfo().uri));
                 trackNumber++;
-                queueTotalTime += trackRequest.audioTrack.getDuration();
+                queueTotalTime += request.audioTrack.getDuration();
             }
             embedBuilder.setDescription(builder.toString());
             embedBuilders.add(embedBuilder);
         }
 
-        // Add page numbers and total time
+        // Add total time
+        UserSettings userSettings = new UserSettings(ctx);
+        String a = String.format(
+                "Total time remaining: %s\nEnding at %s",
+                AudioUtils.durationToString(queueTotalTime),
+                userSettings.getShortDateTime(ZonedDateTime.now(userSettings.timezone).plusNanos(TimeUnit.MILLISECONDS.toNanos(queueTotalTime)).toEpochSecond())
+        );
         String totalTimeString = "Total time remaining: " + AudioUtils.durationToString(queueTotalTime);
         for (EmbedBuilder embedBuilder : embedBuilders)
             embedBuilder.setDescription(totalTimeString);

@@ -10,7 +10,6 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.VoiceChannel;
-import sh.niall.misty.audio.AudioGuildManager;
 import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
 import sh.niall.misty.utils.audio.helpers.TrackWaiter;

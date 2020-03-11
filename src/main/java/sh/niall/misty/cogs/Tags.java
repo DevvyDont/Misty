@@ -4,12 +4,14 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.User;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import sh.niall.misty.Misty;
-import sh.niall.misty.playlists.PlaylistUtils;
-import sh.niall.misty.tag.Tag;
-import sh.niall.misty.utils.cogs.MistyCog;
+import sh.niall.misty.utils.misty.MistyCog;
+import sh.niall.misty.utils.settings.UserSettings;
+import sh.niall.misty.utils.tags.Tag;
+import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.Menu;
 import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.commands.Context;
@@ -19,9 +21,6 @@ import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.WaiterException;
 
 import java.awt.*;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -82,8 +81,7 @@ public class Tags extends MistyCog {
         Tag.validateBody(body);
 
         // Create the tag
-        Tag tag = new Tag(db, ctx.getGuild().getIdLong(), ctx.getAuthor().getIdLong(), friendlyName, body);
-        tag.save();
+        new Tag(db, ctx.getGuild().getIdLong(), ctx.getAuthor().getIdLong(), friendlyName, body).save();
 
         // Inform the invoker
         ctx.send(String.format("Tag `%s` created!", friendlyName));
@@ -94,12 +92,9 @@ public class Tags extends MistyCog {
         if (ctx.getArgsStripped().isEmpty())
             throw new CommandException("Please provide a tag to delete!");
 
-        // First get the name
+        // First get the tag
         String friendlyName = String.join(" ", ctx.getArgsStripped());
-        String searchName = Tag.generateSearchName(friendlyName);
-
-        // Get the tag
-        Tag tag = new Tag(db, ctx.getGuild().getIdLong(), searchName);
+        Tag tag = new Tag(db, ctx.getGuild().getIdLong(), Tag.generateSearchName(friendlyName));
 
         // Make sure the invoker is the owner
         if (ctx.getAuthor().getIdLong() != tag.author)
@@ -110,18 +105,16 @@ public class Tags extends MistyCog {
         embedBuilder.setAuthor("Tag Delete");
         embedBuilder.setDescription(String.format("Are you sure you want to delete the %s tag?", friendlyName));
         embedBuilder.setColor(Color.RED);
-        embedBuilder.setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
+        embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
         embedBuilder.addField("Content: ", tag.body, false);
-        embedBuilder.addField("Created: ", Instant.ofEpochSecond(tag.timestamp).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("dd MMM yyyy")), true);
+        embedBuilder.addField("Created: ", new UserSettings(ctx).getLongDateTime(tag.timestamp), true);
         embedBuilder.addField("Uses: ", String.valueOf(tag.uses), true);
 
         // Delete if confirmed
-        if (sendConfirmation(ctx, embedBuilder.build())) {
-            tag.delete();
-            ctx.send(String.format("Tag `%s` deleted!", tag.friendlyName));
-        } else {
+        if (sendConfirmation(ctx, embedBuilder.build()))
+            ctx.send(String.format("Tag `%s` deleted!", tag.delete().friendlyName));
+        else
             ctx.send(String.format("Okay! I won't delete tag %s", tag.friendlyName));
-        }
     }
 
     @GroupCommand(group = "tag", name = "edit", aliases = {"e"})
@@ -130,12 +123,9 @@ public class Tags extends MistyCog {
         if (ctx.getArgsStripped().isEmpty())
             throw new CommandException("Please provide the name of the tag you want to edit!");
 
-        // First get the name
-        String friendlyName = String.join(" ", ctx.getArgsStripped());
-        String searchName = Tag.generateSearchName(friendlyName);
-
         // Get the tag
-        Tag tag = new Tag(db, ctx.getGuild().getIdLong(), searchName);
+        String friendlyName = String.join(" ", ctx.getArgsStripped());
+        Tag tag = new Tag(db, ctx.getGuild().getIdLong(), Tag.generateSearchName(friendlyName));
 
         // Make sure the invoker is the owner
         if (ctx.getAuthor().getIdLong() != tag.author)
@@ -168,8 +158,8 @@ public class Tags extends MistyCog {
         EmbedBuilder embedBuilder = new EmbedBuilder()
                 .setTitle("Edit Conformation")
                 .setDescription(String.format("Are you sure you want to make these changes to the tag %s?", tag.friendlyName))
-                .setColor(Color.ORANGE)
-                .setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
+                .setColor(Color.YELLOW)
+                .setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
 
 
         // Using Atomic to keep track of how many iterations
@@ -221,7 +211,7 @@ public class Tags extends MistyCog {
                         if (this.db.count(Filters.and(Filters.eq("author", ctx.getAuthor().getIdLong()), Filters.eq("guild", ctx.getGuild().getIdLong()))) >= maxTagsPerMember)
                             throw new CommandException("They already have the maximum amount of tags in this guild!");
 
-                        embedBuilder.addField("New Owner:", ctx.getGuild().getMemberById(newOwnerLong).getEffectiveName(), false);
+                        embedBuilder.addField("New Owner:", UserSettings.getName(ctx, newOwnerLong), false);
                         embedBuilder.addField("WARNING:", "You will lose ownership of this tag!", false);
                         embedBuilder.setColor(Color.RED);
                         tag.author = newOwnerLong;
@@ -236,8 +226,8 @@ public class Tags extends MistyCog {
             EmbedBuilder targetEmbed = new EmbedBuilder()
                     .setTitle("Tag Transfer")
                     .setDescription(String.format("Would you like to take ownership of the `%s` tag?", tag.friendlyName))
-                    .setColor(Color.ORANGE)
-                    .setAuthor(ctx.getGuild().getMemberById(tag.author).getEffectiveName(), null, ctx.getBot().getUserById(tag.author).getEffectiveAvatarUrl());
+                    .setColor(Color.YELLOW)
+                    .setAuthor(UserSettings.getName(ctx, tag.author), null, ctx.getBot().getUserById(tag.author).getEffectiveAvatarUrl());
 
             boolean targetDecision;
             try {
@@ -268,21 +258,24 @@ public class Tags extends MistyCog {
         // Find the tag
         String tagName = String.join(" ", ctx.getArgsStripped());
         Tag tag = new Tag(db, ctx.getGuild().getIdLong(), Tag.generateSearchName(tagName));
+        UserSettings userSettings = new UserSettings(ctx.getAuthor().getIdLong());
 
         // Create the output
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle(StringUtils.capitalize(tag.searchName.toLowerCase()));
-        embedBuilder.setColor(Color.PINK);
-        String builder = String.format("Tag by: %s\n", PlaylistUtils.getTargetName(ctx, tag.author)) +
-                String.format("Uses: %s\n", tag.uses) +
-                String.format("Length: %s\n", tag.body.length()) +
-                String.format("Created: %s\n\n", Instant.ofEpochSecond(tag.timestamp).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("dd MMM yyyy")));
-        if (ctx.getGuild().getMemberById(tag.author) == null)
-            builder += "Author is currently not in this discord, tag is claimable!";
-        embedBuilder.setDescription(builder);
+        embedBuilder.setColor(Helper.randomColor());
+        embedBuilder.setDescription(String.format(
+                "Tag by: %s\nUses: %s\nLength: %s\nCreated: %s\n\n%s",
+                UserSettings.getName(ctx, tag.author),
+                tag.uses,
+                tag.body.length(),
+                userSettings.getLongDateTime(tag.timestamp),
+                (ctx.getGuild().getMemberById(tag.author) == null) ? "Author is currently not in this discord, tag is claimable!" : ""
+        ));
+        embedBuilder.setFooter("Using your specified Timezone: " + userSettings.timezone.getId());
         User user = ctx.getBot().getUserById(tag.author);
         if (user != null)
-            embedBuilder.setAuthor(PlaylistUtils.getTargetName(ctx, tag.author), null, user.getEffectiveAvatarUrl());
+            embedBuilder.setAuthor(UserSettings.getName(ctx, tag.author), null, user.getEffectiveAvatarUrl());
 
         // Display the tag content
         ctx.send(embedBuilder.build());
@@ -290,9 +283,8 @@ public class Tags extends MistyCog {
 
     @GroupCommand(group = "tag", name = "list", aliases = {"l"})
     public void _commandList(Context ctx) throws CommandException, WaiterException {
-        long targetId = ctx.getAuthor().getIdLong();
-
         // If they provided an argument, see if it's a possible target
+        long targetId = ctx.getAuthor().getIdLong();
         if (!ctx.getArgsStripped().isEmpty()) {
             String possibleTarget = ctx.getArgsStripped().get(0).replace("<@!", "").replace("<@", "").replace(">", "");
             int length = possibleTarget.length();
@@ -306,42 +298,35 @@ public class Tags extends MistyCog {
         for (Document document : db.find(Filters.or(Filters.eq("author", targetId), Filters.eq("guild", ctx.getGuild().getIdLong())))) {
             tags.add(new Tag(db, document));
         }
-
         if (tags.isEmpty())
-            throw new CommandException(String.format("%s has no tags!", PlaylistUtils.getTargetName(ctx, targetId)));
+            throw new CommandException(String.format("%s has no tags!", UserSettings.getName(ctx, targetId)));
 
         // Getting information for the pages
         List<EmbedBuilder> embedBuilderList = new ArrayList<>();
-        String targetName = PlaylistUtils.getTargetName(ctx, targetId);
-        boolean inGuild = ctx.getGuild().getMemberById(targetId) != null;
-        boolean canSee = ctx.getBot().getUserById(targetId) != null;
-        String imageUrl = null;
-        if (canSee)
-            imageUrl = ctx.getBot().getUserById(targetId).getEffectiveAvatarUrl();
+        EmbedBuilder embedBuilderMaster = new EmbedBuilder();
+        User targetUser = ctx.getBot().getUserById(targetId);
+        String targetName = UserSettings.getName(ctx, targetId);
+        embedBuilderMaster.setTitle(String.format("%s's tags!", targetName));
+        embedBuilderMaster.setAuthor(targetName, null, (targetUser != null) ? targetUser.getEffectiveAvatarUrl() : null);
+        embedBuilderMaster.setColor(Helper.randomColor());
+        String baseDesc = String.format(
+                "Showing tags they own.\nThey currently have %s tags! %s\n\n",
+                tags.size(),
+                (ctx.getGuild().getMemberById(targetId) == null) ? "\nAs they're not in this server currently, you can claim their tags." : ""
+        );
 
-        while (!tags.isEmpty()) {
-
-            int added = 0;
-            EmbedBuilder embedBuilder = new EmbedBuilder();
-            embedBuilder.setTitle(String.format("%s's tags!", targetName));
-            if (canSee)
-                embedBuilder.setAuthor(targetName, null, imageUrl);
-
-            StringBuilder builder = new StringBuilder();
-            builder.append(String.format("Showing tags they own.\nThey currently have %s tags! ", tags.size()));
-            if (!inGuild)
-                builder.append("\nAs they're not in this server currently, you can claim their tags.");
-            builder.append("\n\n");
-
-            while (!tags.isEmpty() && added < 10) {
-                added++;
-                Tag tag = tags.remove(0);
-                builder.append(String.format("- %s\n", tag.searchName));
+        // Loop through tags and add them to the desc
+        for (List<Tag> tagList : ListUtils.partition(tags, 10)) {
+            EmbedBuilder embedBuilder = new EmbedBuilder(embedBuilderMaster);
+            StringBuilder stringBuilder = new StringBuilder(baseDesc);
+            for (Tag tag : tagList) {
+                stringBuilder.append(String.format("- %s\n", tag.searchName));
             }
-            embedBuilder.setDescription(builder.toString());
+            embedBuilder.setDescription(stringBuilder.toString());
             embedBuilderList.add(embedBuilder);
         }
 
+        // Run the paginator
         Paginator paginator = new Paginator(ctx, embedBuilderList, 160, false);
         paginator.run();
     }

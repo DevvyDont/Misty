@@ -1,4 +1,4 @@
-package sh.niall.misty.audio;
+package sh.niall.misty.utils.audio.helpers;
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 

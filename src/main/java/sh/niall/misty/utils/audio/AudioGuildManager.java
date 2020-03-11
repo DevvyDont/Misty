@@ -1,4 +1,4 @@
-package sh.niall.misty.audio;
+package sh.niall.misty.utils.audio;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
