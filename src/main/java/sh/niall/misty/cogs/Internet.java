@@ -127,6 +127,10 @@ public class Internet extends Cog {
             embedBuilders.add(embedBuilder);
         }
         response.close();
-        new Paginator(ctx, embedBuilders, 160, true).run();
+
+        if (embedBuilders.isEmpty())
+            ctx.send("I found no results for the word: " + word);
+        else
+            new Paginator(ctx, embedBuilders, 160, true).run();
     }
 }
