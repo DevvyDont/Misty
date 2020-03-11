@@ -39,11 +39,7 @@ public class Reminders extends MistyCog {
     public void _commandGroup(Context ctx) throws CommandException, WaiterException {
         if (ctx.didSubCommandRun())
             return;
-        _commandMe(ctx);
-    }
 
-    @GroupCommand(group = "remind", name = "me")
-    public void _commandMe(Context ctx) throws CommandException, WaiterException {
         if (db.count(Filters.eq("author", ctx.getAuthor().getIdLong())) >= 20)
             throw new CommandException("You can have up to 20 reminders at a time!");
 
