@@ -10,6 +10,7 @@ import org.bson.Document;
 import sh.niall.misty.Misty;
 import sh.niall.misty.utils.misty.MistyCog;
 import sh.niall.misty.utils.playlists.PlaylistUtils;
+import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.tags.Tag;
 import sh.niall.misty.utils.ui.Menu;
 import sh.niall.misty.utils.ui.paginator.Paginator;
@@ -107,7 +108,7 @@ public class Tags extends MistyCog {
         embedBuilder.setAuthor("Tag Delete");
         embedBuilder.setDescription(String.format("Are you sure you want to delete the %s tag?", friendlyName));
         embedBuilder.setColor(Color.RED);
-        embedBuilder.setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
+        embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
         embedBuilder.addField("Content: ", tag.body, false);
         embedBuilder.addField("Created: ", Instant.ofEpochSecond(tag.timestamp).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("dd MMM yyyy")), true);
         embedBuilder.addField("Uses: ", String.valueOf(tag.uses), true);
@@ -161,7 +162,7 @@ public class Tags extends MistyCog {
                 .setTitle("Edit Conformation")
                 .setDescription(String.format("Are you sure you want to make these changes to the tag %s?", tag.friendlyName))
                 .setColor(Color.ORANGE)
-                .setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
+                .setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
 
 
         // Using Atomic to keep track of how many iterations
@@ -213,7 +214,7 @@ public class Tags extends MistyCog {
                         if (this.db.count(Filters.and(Filters.eq("author", ctx.getAuthor().getIdLong()), Filters.eq("guild", ctx.getGuild().getIdLong()))) >= maxTagsPerMember)
                             throw new CommandException("They already have the maximum amount of tags in this guild!");
 
-                        embedBuilder.addField("New Owner:", ctx.getGuild().getMemberById(newOwnerLong).getEffectiveName(), false);
+                        embedBuilder.addField("New Owner:", UserSettings.getName(ctx, newOwnerLong), false);
                         embedBuilder.addField("WARNING:", "You will lose ownership of this tag!", false);
                         embedBuilder.setColor(Color.RED);
                         tag.author = newOwnerLong;
@@ -229,7 +230,7 @@ public class Tags extends MistyCog {
                     .setTitle("Tag Transfer")
                     .setDescription(String.format("Would you like to take ownership of the `%s` tag?", tag.friendlyName))
                     .setColor(Color.ORANGE)
-                    .setAuthor(ctx.getGuild().getMemberById(tag.author).getEffectiveName(), null, ctx.getBot().getUserById(tag.author).getEffectiveAvatarUrl());
+                    .setAuthor(UserSettings.getName(ctx, tag.author), null, ctx.getBot().getUserById(tag.author).getEffectiveAvatarUrl());
 
             boolean targetDecision;
             try {
@@ -265,21 +266,23 @@ public class Tags extends MistyCog {
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle(StringUtils.capitalize(tag.searchName.toLowerCase()));
         embedBuilder.setColor(Color.PINK);
-        String builder = String.format("Tag by: %s\n", PlaylistUtils.getTargetName(ctx, tag.author)) +
-                String.format("Uses: %s\n", tag.uses) +
-                String.format("Length: %s\n", tag.body.length()) +
-                String.format("Created: %s\n\n", Instant.ofEpochSecond(tag.timestamp).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("dd MMM yyyy")));
-        if (ctx.getGuild().getMemberById(tag.author) == null)
-            builder += "Author is currently not in this discord, tag is claimable!";
-        embedBuilder.setDescription(builder);
+        embedBuilder.setDescription(String.format(
+                "Tag by: %s\nUses: %s\nLength: %s\nCreated: %s\n\n%s",
+                UserSettings.getName(ctx, tag.author),
+                tag.uses,
+                tag.body.length(),
+                Instant.ofEpochSecond(tag.timestamp).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
+                (ctx.getGuild().getMemberById(tag.author) == null) ? "Author is currently not in this discord, tag is claimable!" : ""
+        ));
         User user = ctx.getBot().getUserById(tag.author);
         if (user != null)
-            embedBuilder.setAuthor(PlaylistUtils.getTargetName(ctx, tag.author), null, user.getEffectiveAvatarUrl());
+            embedBuilder.setAuthor(UserSettings.getName(ctx, tag.author), null, user.getEffectiveAvatarUrl());
 
         // Display the tag content
         ctx.send(embedBuilder.build());
     }
 
+    // TODO: CLEAN THIS DISPLAY UP
     @GroupCommand(group = "tag", name = "list", aliases = {"l"})
     public void _commandList(Context ctx) throws CommandException, WaiterException {
         // If they provided an argument, see if it's a possible target
@@ -298,13 +301,13 @@ public class Tags extends MistyCog {
             tags.add(new Tag(db, document));
         }
         if (tags.isEmpty())
-            throw new CommandException(String.format("%s has no tags!", PlaylistUtils.getTargetName(ctx, targetId)));
+            throw new CommandException(String.format("%s has no tags!", UserSettings.getName(ctx, targetId)));
 
         // Getting information for the pages
         List<EmbedBuilder> embedBuilderList = new ArrayList<>();
         EmbedBuilder embedBuilderMaster = new EmbedBuilder();
         User targetUser = ctx.getBot().getUserById(targetId);
-        String targetName = PlaylistUtils.getTargetName(ctx, targetId);
+        String targetName = UserSettings.getName(ctx, targetId);
         embedBuilderMaster.setTitle(String.format("%s's tags!", targetName));
         embedBuilderMaster.setAuthor(targetName, null, (targetUser != null) ? targetUser.getEffectiveAvatarUrl() : null);
         String baseDesc = String.format("Showing tags they own.\nThey currently have %s tags! %s", tags.size(),

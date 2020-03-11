@@ -26,6 +26,7 @@ import sh.niall.misty.utils.playlists.containers.PlaylistLookupContainer;
 import sh.niall.misty.utils.playlists.containers.PlaylistSong;
 import sh.niall.misty.utils.playlists.containers.PlaylistUrlsContainer;
 import sh.niall.misty.utils.playlists.enums.Permission;
+import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.Menu;
 import sh.niall.misty.utils.ui.paginator.Paginator;
@@ -95,14 +96,14 @@ public class Playlists extends MistyCog {
         // Convert editors to real names
         StringBuilder stringBuilder = new StringBuilder();
         for (Long editor : playlist.editors) {
-            stringBuilder.append(PlaylistUtils.getTargetName(ctx, editor)).append("\n");
+            stringBuilder.append(UserSettings.getName(ctx, editor)).append("\n");
         }
 
         // Validate they want to delete the playlist
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Playlist delete confirm!");
         embedBuilder.setDescription("Are you sure you want to delete the playlist " + friendlyName);
-        embedBuilder.setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
+        embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
         embedBuilder.addField("Songs:", String.valueOf(playlist.songList.size()), true);
         if (stringBuilder.length() != 0)
             embedBuilder.addField("Editors:", stringBuilder.toString(), true);
@@ -128,7 +129,7 @@ public class Playlists extends MistyCog {
                 .setTitle("Edit Conformation")
                 .setDescription("Are you sure you want to make these changes to the playlist " + friendlyName + " ?")
                 .setColor(Color.ORANGE)
-                .setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
+                .setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
 
         // Present the menu and ask what they want.
         int menuOption = Menu.showMenu(
@@ -261,7 +262,7 @@ public class Playlists extends MistyCog {
                             throw new CommandException("You can't make a bot an editor!");
 
                         playlist.editors.add(newTarget);
-                        embedBuilder.addField("New editor:", PlaylistUtils.getTargetName(ctx, newTarget), false);
+                        embedBuilder.addField("New editor:", UserSettings.getName(ctx, newTarget), false);
                         embedBuilder.addField("WARNING:", "Editors can Add and Remove songs from a playlist. Please make sure you trust who you're adding.", false);
                         embedBuilder.setColor(Color.RED);
                         break inputLoop;
@@ -275,7 +276,7 @@ public class Playlists extends MistyCog {
                             throw new CommandException("They're not an editor for this playlist.");
 
                         playlist.editors.remove(removeTarget);
-                        embedBuilder.addField("Removing editor:", PlaylistUtils.getTargetName(ctx, removeTarget), false);
+                        embedBuilder.addField("Removing editor:", UserSettings.getName(ctx, removeTarget), false);
                         embedBuilder.setColor(Color.RED);
                         break inputLoop;
                     case 7:
@@ -296,7 +297,7 @@ public class Playlists extends MistyCog {
                         if (db.find(Filters.and(Filters.eq("author", newOwnerLong), Filters.eq("searchName", playlist.searchName))).first() != null)
                             throw new CommandException("They already have a playlist called " + playlist.friendlyName);
 
-                        embedBuilder.addField("New Owner:", PlaylistUtils.getTargetName(ctx, newOwnerLong), false);
+                        embedBuilder.addField("New Owner:", UserSettings.getName(ctx, newOwnerLong), false);
                         embedBuilder.addField("WARNING:", "You will lose access to this playlist and the playlist editors will be reset!", false);
                         embedBuilder.setColor(Color.RED);
                         playlist.editors = new ArrayList<>();
@@ -313,7 +314,7 @@ public class Playlists extends MistyCog {
                     .setTitle("Playlist Transfer")
                     .setDescription("Would you like to take ownership of the `" + playlist.friendlyName + "` playlist?")
                     .setColor(Color.ORANGE)
-                    .setAuthor(PlaylistUtils.getTargetName(ctx, playlist.author), null, ctx.getBot().getUserById(playlist.author).getEffectiveAvatarUrl());
+                    .setAuthor(UserSettings.getName(ctx, playlist.author), null, ctx.getBot().getUserById(playlist.author).getEffectiveAvatarUrl());
 
             boolean targetDecision;
             try {
@@ -455,11 +456,11 @@ public class Playlists extends MistyCog {
 
             // Ensure we found some
             if (playlists.isEmpty())
-                throw new CommandException(String.format("I found no playlists by the user %s", PlaylistUtils.getTargetName(ctx, result.targetId)));
+                throw new CommandException(String.format("I found no playlists by the user %s", UserSettings.getName(ctx, result.targetId)));
 
             for (List<Playlist> playlistList : ListUtils.partition(playlists, 5)) {
                 EmbedBuilder embedBuilder = new EmbedBuilder();
-                embedBuilder.setTitle(PlaylistUtils.getTargetName(ctx, result.targetId) + " Playlists!");
+                embedBuilder.setTitle(UserSettings.getName(ctx, result.targetId) + " Playlists!");
                 embedBuilder.setDescription("Showing playlists they own and can edit.");
                 embedBuilder.setColor(Color.GREEN);
 
@@ -467,7 +468,7 @@ public class Playlists extends MistyCog {
                     String builder = playlist.description + "\n" +
                             "Songs: " + playlist.songList.size() + "\n" +
                             "Plays: " + playlist.plays + "\n" +
-                            "Author: " + PlaylistUtils.getTargetName(ctx, playlist.author) + "\n" +
+                            "Author: " + UserSettings.getName(ctx, playlist.author) + "\n" +
                             "Editors: " + playlist.editors.size() + "\n" +
                             "Role: " + StringUtils.capitalize(playlist.getUserPermission(result.targetId).toString().toLowerCase()) + "\n";
                     embedBuilder.addField(String.format("**%s**", playlist.friendlyName), builder, true);
@@ -495,13 +496,13 @@ public class Playlists extends MistyCog {
                 embedBuilder.setDescription(playlist.description);
                 embedBuilder.setColor(Color.PINK);
                 embedBuilder.setThumbnail((playlist.image.isEmpty()) ? null : playlist.image);
-                embedBuilder.setAuthor(PlaylistUtils.getTargetName(ctx, playlist.author), null, (user == null) ? null : user.getEffectiveAvatarUrl());
+                embedBuilder.setAuthor(UserSettings.getName(ctx, playlist.author), null, (user == null) ? null : user.getEffectiveAvatarUrl());
 
                 for (String url : urlList) {
                     PlaylistSong playlistSong = playlist.songList.get(url);
                     AudioTrack audioTrack = songCache.getTrack(ctx.getGuild(), url);
                     String builder = "Duration: " + AudioUtils.durationToString(audioTrack.getInfo().length) + "\n" +
-                            "Added By: " + PlaylistUtils.getTargetName(ctx, playlistSong.addedBy) + "\n" +
+                            "Added By: " + UserSettings.getName(ctx, playlistSong.addedBy) + "\n" +
                             "Added: " + Instant.ofEpochSecond(playlistSong.addedTimestamp).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("dd MMM yyyy")) + "\n" +
                             "Url: " + url;
                     embedBuilder.addField(audioTrack.getInfo().title, builder, true);

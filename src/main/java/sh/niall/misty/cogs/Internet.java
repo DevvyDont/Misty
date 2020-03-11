@@ -6,6 +6,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
@@ -117,7 +118,7 @@ public class Internet extends Cog {
             LocalDate date = LocalDate.parse(jsonObject.getString("written_on").split("T")[0], urbanInput);
             embedBuilder.setTitle("Urban Dictionary");
             embedBuilder.setDescription("Word: " + word);
-            embedBuilder.setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
+            embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
             embedBuilder.addField("Definition:", jsonObject.getString("definition"), false);
             embedBuilder.addField("Example:", jsonObject.getString("example"), false);
             embedBuilder.addField("Author:", jsonObject.getString("author"), true);

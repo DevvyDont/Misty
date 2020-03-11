@@ -15,6 +15,7 @@ import sh.niall.misty.utils.audio.helpers.TrackRequest;
 import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
 import sh.niall.misty.utils.audio.AudioUtils;
+import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
@@ -244,13 +245,14 @@ public class Music extends Cog {
                 AudioUtils.durationToString(trackRequest.audioTrack.getDuration())
         );
         Member requester = ctx.getGuild().getMemberById(trackRequest.requestAuthor);
+        // TODO fix this
 
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Now Playing!", trackRequest.audioTrack.getInfo().uri);
         embedBuilder.setDescription("From " + StringUtils.capitalize(trackRequest.audioTrack.getSourceManager().getSourceName()));
         embedBuilder.setImage(audioGuild.getArtwork());
         embedBuilder.setColor(Color.PINK);
-        embedBuilder.setAuthor("Requested by: " + requester.getEffectiveName(), null, requester.getUser().getEffectiveAvatarUrl());
+        embedBuilder.setAuthor("Requested by: " + UserSettings.getName(ctx, trackRequest.requestAuthor), null, requester.getUser().getEffectiveAvatarUrl());
         embedBuilder.addField("Title:", trackRequest.audioTrack.getInfo().title, true);
         embedBuilder.addField("Duration:", duration, false);
         embedBuilder.addField("Volume:", audioGuild.getVolume() + "%", true);

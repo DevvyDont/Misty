@@ -14,6 +14,7 @@ import sh.niall.misty.Misty;
 import sh.niall.misty.utils.misty.MistyCog;
 import sh.niall.misty.utils.reminders.HumanDateConverter;
 import sh.niall.misty.utils.reminders.RemindersPaginator;
+import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.ui.Helper;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.commands.interfaces.Group;
@@ -93,7 +94,7 @@ public class Reminders extends MistyCog {
             EmbedBuilder embedBuilder = new EmbedBuilder();
             embedBuilder.setTitle("Your reminders", document.getString("url"));
             embedBuilder.setDescription("Time is in UTC.");
-            embedBuilder.setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
+            embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
             embedBuilder.addField("Date:", remindDT.format(DateTimeFormatter.ofPattern("EEE dd MMMM yyyy")), true);
             embedBuilder.addField("Time:", remindDT.format(DateTimeFormatter.ofPattern("hh:mm:ss a")), true);
             embedBuilder.addField("Duration:", durationToString(duration), false);
@@ -192,7 +193,7 @@ public class Reminders extends MistyCog {
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Are you sure you want to delete this reminder?", document.getString("url"));
         embedBuilder.setDescription("Time is in UTC.");
-        embedBuilder.setAuthor(ctx.getAuthor().getEffectiveName(), null, ctx.getUser().getEffectiveAvatarUrl());
+        embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
         embedBuilder.addField("Date:", remindDT.format(DateTimeFormatter.ofPattern("EEE dd MMMM yyyy")), true);
         embedBuilder.addField("Time:", remindDT.format(DateTimeFormatter.ofPattern("hh:mm:ss a")), true);
         embedBuilder.addField("Duration:", durationToString(Duration.between(LocalDateTime.now(), remindDT)), false);

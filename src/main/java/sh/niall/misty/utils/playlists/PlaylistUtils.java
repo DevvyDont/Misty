@@ -67,25 +67,6 @@ public class PlaylistUtils {
     }
 
     /**
-     * Returns the targets name or unknown user if they can't be found
-     *
-     * @param ctx The command context
-     * @param id  The target ID
-     * @return The targets name
-     */
-    public static String getTargetName(Context ctx, long id) {
-        Member member = ctx.getGuild().getMemberById(id);
-        if (member != null)
-            return member.getEffectiveName();
-
-        User user = ctx.getBot().getUserById(id);
-        if (user != null)
-            return user.getName() + "#" + user.getDiscriminator();
-
-        return "Unknown User (" + id + ")";
-    }
-
-    /**
      * Returns true if the target can't be found
      * (The bot can't see the user)
      *
