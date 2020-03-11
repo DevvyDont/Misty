@@ -17,7 +17,8 @@ import sh.niall.yui.exceptions.WaiterException;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,8 +28,7 @@ public class Internet extends Cog {
     OkHttpClient client = new OkHttpClient();
     final String[] dogChoices = {"🐶 Woof! 🐶", "🐶 Bark! 🐶", "🐶 Arf! 🐶"};
     final String[] catChoices = {"\uD83D\uDC31 Meow! \uD83D\uDC31", "\uD83D\uDC31 Purr! \uD83D\uDC31"};
-    final DateTimeFormatter urbanInput = DateTimeFormatter.ofPattern("uuuu-MM-dd");
-    final DateTimeFormatter urbanOutput = DateTimeFormatter.ofPattern("dd-MM-uuuu");
+    final DateTimeFormatter urbanInput = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Command(name = "dog", aliases = {"puppo", "puppos"})
     public void _commandDog(Context context) throws IOException, CommandException {
@@ -112,10 +112,11 @@ public class Internet extends Cog {
         }
 
         List<EmbedBuilder> embedBuilders = new ArrayList<>();
+        UserSettings userSettings = new UserSettings(ctx);
         for (Object object : new JSONObject(response.body().string()).getJSONArray("list")) {
             JSONObject jsonObject = (JSONObject) object;
             EmbedBuilder embedBuilder = new EmbedBuilder();
-            LocalDate date = LocalDate.parse(jsonObject.getString("written_on").split("T")[0], urbanInput);
+            String date = jsonObject.getString("written_on").replace("T", " ").split("\\.")[0];
             embedBuilder.setTitle("Urban Dictionary");
             embedBuilder.setDescription("Word: " + word);
             embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
@@ -123,7 +124,7 @@ public class Internet extends Cog {
             embedBuilder.addField("Example:", jsonObject.getString("example"), false);
             embedBuilder.addField("Author:", jsonObject.getString("author"), true);
             embedBuilder.addField("Thumbs Up/Down", String.format("\uD83D\uDC4D %s \uD83D\uDC4E %s", jsonObject.getInt("thumbs_up"), jsonObject.getInt("thumbs_down")), true);
-            embedBuilder.addField("Written on:", date.format(urbanOutput), true);
+            embedBuilder.addField("Written on:", userSettings.getShortDate(LocalDateTime.parse(date, urbanInput).toEpochSecond(ZoneOffset.UTC)), true);
             embedBuilders.add(embedBuilder);
         }
         response.close();
