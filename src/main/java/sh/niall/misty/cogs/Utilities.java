@@ -17,6 +17,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Utilities extends MistyCog {
 
+    static final String inviteLink = "<https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=8>";
+
     /**
      * Sends the specified users avatar!
      */
@@ -56,6 +58,11 @@ public class Utilities extends MistyCog {
         } catch (NullPointerException error) {
             throw new CommandException("You're not currently in a voice channel, so I can't send a link.");
         }
+    }
+
+    @Command(name = "invite")
+    public void _commandInvite(Context ctx) {
+        ctx.send(String.format(inviteLink, getYui().getJda().getSelfUser().getId()));
     }
 
     @Command(name = "settings")
