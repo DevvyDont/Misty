@@ -128,7 +128,7 @@ public class Playlists extends MistyCog {
         EmbedBuilder embedBuilder = new EmbedBuilder()
                 .setTitle("Edit Conformation")
                 .setDescription("Are you sure you want to make these changes to the playlist " + friendlyName + " ?")
-                .setColor(Color.ORANGE)
+                .setColor(Color.YELLOW)
                 .setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
 
         // Present the menu and ask what they want.
@@ -313,7 +313,7 @@ public class Playlists extends MistyCog {
             EmbedBuilder targetEmbed = new EmbedBuilder()
                     .setTitle("Playlist Transfer")
                     .setDescription("Would you like to take ownership of the `" + playlist.friendlyName + "` playlist?")
-                    .setColor(Color.ORANGE)
+                    .setColor(Color.YELLOW)
                     .setAuthor(UserSettings.getName(ctx, playlist.author), null, ctx.getBot().getUserById(playlist.author).getEffectiveAvatarUrl());
 
             boolean targetDecision;
@@ -462,7 +462,7 @@ public class Playlists extends MistyCog {
                 EmbedBuilder embedBuilder = new EmbedBuilder();
                 embedBuilder.setTitle(UserSettings.getName(ctx, result.targetId) + " Playlists!");
                 embedBuilder.setDescription("Showing playlists they own and can edit.");
-                embedBuilder.setColor(Color.GREEN);
+                embedBuilder.setColor(Helper.randomColor());
 
                 for (Playlist playlist : playlistList) {
                     String builder = playlist.description + "\n" +
@@ -489,12 +489,13 @@ public class Playlists extends MistyCog {
                 throw new CommandException(String.format("Playlist %s has no songs!", playlist.friendlyName));
 
             // Create the embeds
+            Color embedColor = Helper.randomColor();
             User user = ctx.getBot().getUserById(playlist.author);
             for (List<String> urlList : ListUtils.partition(new ArrayList<>(playlist.songList.keySet()), 6)) {
                 EmbedBuilder embedBuilder = new EmbedBuilder();
                 embedBuilder.setTitle(String.format("**%s**", playlist.friendlyName));
                 embedBuilder.setDescription(playlist.description);
-                embedBuilder.setColor(Color.PINK);
+                embedBuilder.setColor(embedColor);
                 embedBuilder.setThumbnail((playlist.image.isEmpty()) ? null : playlist.image);
                 embedBuilder.setAuthor(UserSettings.getName(ctx, playlist.author), null, (user == null) ? null : user.getEffectiveAvatarUrl());
 

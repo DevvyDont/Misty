@@ -29,7 +29,7 @@ public class MistyCog extends Cog {
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Confirmation!");
         embedBuilder.setDescription(question);
-        embedBuilder.setColor(Color.ORANGE);
+        embedBuilder.setColor(Color.YELLOW);
         embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
         return sendConfirmation(ctx, embedBuilder.build());
     }

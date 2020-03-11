@@ -12,6 +12,7 @@ import sh.niall.misty.utils.misty.MistyCog;
 import sh.niall.misty.utils.playlists.PlaylistUtils;
 import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.tags.Tag;
+import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.Menu;
 import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.commands.Context;
@@ -161,7 +162,7 @@ public class Tags extends MistyCog {
         EmbedBuilder embedBuilder = new EmbedBuilder()
                 .setTitle("Edit Conformation")
                 .setDescription(String.format("Are you sure you want to make these changes to the tag %s?", tag.friendlyName))
-                .setColor(Color.ORANGE)
+                .setColor(Color.YELLOW)
                 .setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
 
 
@@ -229,7 +230,7 @@ public class Tags extends MistyCog {
             EmbedBuilder targetEmbed = new EmbedBuilder()
                     .setTitle("Tag Transfer")
                     .setDescription(String.format("Would you like to take ownership of the `%s` tag?", tag.friendlyName))
-                    .setColor(Color.ORANGE)
+                    .setColor(Color.YELLOW)
                     .setAuthor(UserSettings.getName(ctx, tag.author), null, ctx.getBot().getUserById(tag.author).getEffectiveAvatarUrl());
 
             boolean targetDecision;
@@ -261,19 +262,21 @@ public class Tags extends MistyCog {
         // Find the tag
         String tagName = String.join(" ", ctx.getArgsStripped());
         Tag tag = new Tag(db, ctx.getGuild().getIdLong(), Tag.generateSearchName(tagName));
+        UserSettings userSettings = new UserSettings(ctx.getAuthor().getIdLong());
 
         // Create the output
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle(StringUtils.capitalize(tag.searchName.toLowerCase()));
-        embedBuilder.setColor(Color.PINK);
+        embedBuilder.setColor(Helper.randomColor());
         embedBuilder.setDescription(String.format(
                 "Tag by: %s\nUses: %s\nLength: %s\nCreated: %s\n\n%s",
                 UserSettings.getName(ctx, tag.author),
                 tag.uses,
                 tag.body.length(),
-                Instant.ofEpochSecond(tag.timestamp).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
+                userSettings.getLongDateTime(tag.timestamp),
                 (ctx.getGuild().getMemberById(tag.author) == null) ? "Author is currently not in this discord, tag is claimable!" : ""
         ));
+        embedBuilder.setFooter("Using your specified Timezone: " + userSettings.timezone.getId());
         User user = ctx.getBot().getUserById(tag.author);
         if (user != null)
             embedBuilder.setAuthor(UserSettings.getName(ctx, tag.author), null, user.getEffectiveAvatarUrl());
@@ -310,8 +313,12 @@ public class Tags extends MistyCog {
         String targetName = UserSettings.getName(ctx, targetId);
         embedBuilderMaster.setTitle(String.format("%s's tags!", targetName));
         embedBuilderMaster.setAuthor(targetName, null, (targetUser != null) ? targetUser.getEffectiveAvatarUrl() : null);
-        String baseDesc = String.format("Showing tags they own.\nThey currently have %s tags! %s", tags.size(),
-                (ctx.getGuild().getMemberById(targetId) == null) ? "\nAs they're not in this server currently, you can claim their tags." : "");
+        embedBuilderMaster.setColor(Helper.randomColor());
+        String baseDesc = String.format(
+                "Showing tags they own.\nThey currently have %s tags! %s\n\n",
+                tags.size(),
+                (ctx.getGuild().getMemberById(targetId) == null) ? "\nAs they're not in this server currently, you can claim their tags." : ""
+        );
 
         // Loop through tags and add them to the desc
         for (List<Tag> tagList : ListUtils.partition(tags, 10)) {

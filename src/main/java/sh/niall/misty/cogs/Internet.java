@@ -7,6 +7,7 @@ import okhttp3.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import sh.niall.misty.utils.settings.UserSettings;
+import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
@@ -63,7 +64,7 @@ public class Internet extends Cog {
             EmbedBuilder embedBuilder = new EmbedBuilder();
             embedBuilder.setTitle("Dog Photo!");
             embedBuilder.setDescription(dogChoices[(int) (Math.random() * dogChoices.length)]);
-            embedBuilder.setColor(Color.cyan);
+            embedBuilder.setColor(Helper.randomColor());
             embedBuilder.setImage(url);
             context.send(embedBuilder.build());
         }
@@ -93,7 +94,7 @@ public class Internet extends Cog {
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Cat Photo!");
         embedBuilder.setDescription(catChoices[(int) (Math.random() * catChoices.length)]);
-        embedBuilder.setColor(Color.cyan);
+        embedBuilder.setColor(Helper.randomColor());
         embedBuilder.setImage((String) jsonObject.get("url"));
         context.send(embedBuilder.build());
     }

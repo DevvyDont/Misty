@@ -11,7 +11,13 @@ import sh.niall.yui.Yui;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.exceptions.CommandException;
 
+import java.awt.*;
+import java.time.Instant;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class UserSettings {
     final static public String[] timezones = new String[] {
@@ -26,9 +32,17 @@ public class UserSettings {
     final static public String[] languages = new String[] {
             "English \uD83C\uDDEC\uD83C\uDDE7/\uD83C\uDDFA\uD83C\uDDF8"
     };
+    final static DateTimeFormatter shortDateUS = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+    final static DateTimeFormatter shortDateUK = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    final static DateTimeFormatter shortDateTimeUS = DateTimeFormatter.ofPattern("dd/MM/yyyy - hh:mm a");
+    final static DateTimeFormatter shortDateTimeUK = DateTimeFormatter.ofPattern("dd/MM/yyyy - HH:mm");
+    final static DateTimeFormatter longDateUS = DateTimeFormatter.ofPattern("MMMM dd yyyy");
+    final static DateTimeFormatter longDateUK = DateTimeFormatter.ofPattern("dd MMMM yyyy");
+    final static DateTimeFormatter longDateTimeUS = DateTimeFormatter.ofPattern("MMMM dd yyyy - hh:mm a");
+    final static DateTimeFormatter longDateTimeUK = DateTimeFormatter.ofPattern("dd MMMM yyyy - HH:mm");
+    final static List<String> usTimezones = new ArrayList<>(Arrays.asList("America/New_York", "America/Chicago", "America/Los_Angeles"));
 
     private MongoCollection<Document> db = Misty.database.getCollection("users");
-    private Yui yui = Misty.yui;
     private Document originalDocument = null;
     private long userId;
 
@@ -45,10 +59,26 @@ public class UserSettings {
             language = Languages.valueOf(document.getString("language"));
             preferredName = document.getString("preferredName");
         } else {
-            if (yui.getJda().getUserById(userId) == null)
+            if (Misty.yui.getJda().getUserById(userId) == null)
                 throw new CommandException("User does not exist!");
             save();
         }
+    }
+
+    public String getShortDate(long timestamp) {
+        return Instant.ofEpochSecond(timestamp).atZone(timezone).format((usTimezones.contains(timezone.getId()) ? shortDateUS : shortDateUK));
+    }
+
+    public String getShortDateTime(long timestamp) {
+        return Instant.ofEpochSecond(timestamp).atZone(timezone).format((usTimezones.contains(timezone.getId()) ? shortDateTimeUS : shortDateTimeUK));
+    }
+
+    public String getLongDate(long timestamp) {
+        return Instant.ofEpochSecond(timestamp).atZone(timezone).format((usTimezones.contains(timezone.getId()) ? longDateUS : longDateUK));
+    }
+
+    public String getLongDateTime(long timestamp) {
+        return Instant.ofEpochSecond(timestamp).atZone(timezone).format((usTimezones.contains(timezone.getId()) ? longDateTimeUS : longDateTimeUK));
     }
 
     public UserSettings save() {

@@ -16,6 +16,7 @@ import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
 import sh.niall.misty.utils.audio.AudioUtils;
 import sh.niall.misty.utils.settings.UserSettings;
+import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.cogs.Cog;
 import sh.niall.yui.commands.Context;
@@ -251,7 +252,7 @@ public class Music extends Cog {
         embedBuilder.setTitle("Now Playing!", trackRequest.audioTrack.getInfo().uri);
         embedBuilder.setDescription("From " + StringUtils.capitalize(trackRequest.audioTrack.getSourceManager().getSourceName()));
         embedBuilder.setImage(audioGuild.getArtwork());
-        embedBuilder.setColor(Color.PINK);
+        embedBuilder.setColor(Helper.randomColor());
         embedBuilder.setAuthor("Requested by: " + UserSettings.getName(ctx, trackRequest.requestAuthor), null, requester.getUser().getEffectiveAvatarUrl());
         embedBuilder.addField("Title:", trackRequest.audioTrack.getInfo().title, true);
         embedBuilder.addField("Duration:", duration, false);
@@ -373,12 +374,13 @@ public class Music extends Cog {
         List<EmbedBuilder> embedBuilders = new ArrayList<>();
         long queueTotalTime = 0;
         int trackNumber = 1;
+        Color embedColor = Helper.randomColor();
 
         // Loop over all the songs and add them to the queue
         for (List<TrackRequest> requests : ListUtils.partition(new ArrayList<>(audioGuild.getQueue()), 5)) {
             EmbedBuilder embedBuilder = new EmbedBuilder();
             embedBuilder.setTitle("Music Queue");
-            embedBuilder.setColor(Color.CYAN);
+            embedBuilder.setColor(embedColor);
             StringBuilder builder = new StringBuilder();
             for (TrackRequest request : requests) {
                 // Request user

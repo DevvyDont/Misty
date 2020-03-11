@@ -118,7 +118,7 @@ public class Reminders extends MistyCog {
             embedBuilder.setTitle("Reminder!");
             embedBuilder.setDescription("I'm reminding you about this message:");
             embedBuilder.addField("Message link:", document.getString("url"), false);
-            embedBuilder.setColor(Color.PINK);
+            embedBuilder.setColor(Helper.randomColor());
             MessageBuilder messageBuilder = new MessageBuilder();
             messageBuilder.setContent(String.format("<@%s>", document.getLong("author")));
             messageBuilder.setEmbed(embedBuilder.build());
