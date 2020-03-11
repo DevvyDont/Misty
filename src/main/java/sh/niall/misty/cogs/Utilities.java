@@ -91,7 +91,7 @@ public class Utilities extends MistyCog {
             embedBuilder.addField("New Language:", UserSettings.languages[languageSelection], false);
             userSettings.language = Languages.valueOf(selection);
         } else {
-            ctx.send("What would you like me to call you?");
+            ctx.send("What would you like me to call you?\n(Type `clear` to remove your custom name)");
             AtomicInteger attempts = new AtomicInteger();
             String newName;
             while (true) {
@@ -99,6 +99,10 @@ public class Utilities extends MistyCog {
                     throw new CommandException("Exiting name edit due because of too many failed attempts.");
 
                 newName = getNextMessage(ctx);
+                if (newName.toLowerCase().equals("clear")) {
+                    newName = "";
+                    break;
+                }
                 try {
                     int length = newName.length();
                     if (length < 2 || 40 < length)
