@@ -24,10 +24,7 @@ import sh.niall.yui.exceptions.WaiterException;
 import sh.niall.yui.tasks.interfaces.Loop;
 
 import java.awt.*;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,17 +48,20 @@ public class Reminders extends MistyCog {
             throw new CommandException("You can have up to 20 reminders at a time!");
 
         // Understand the request
-        long remindAt = new HumanDateConverter(String.join(" ", ctx.getArgsStripped())).toTimestamp();
-        LocalDateTime remindDT = LocalDateTime.ofEpochSecond(remindAt, 0, ZoneOffset.UTC);
-        Duration duration = Duration.between(LocalDateTime.now(), remindDT);
+        UserSettings userSettings = new UserSettings(ctx);
+        ZonedDateTime remindAt = new HumanDateConverter(userSettings, String.join(" ", ctx.getArgsStripped())).toZonedDateTime();
+        ZonedDateTime now = ZonedDateTime.now(userSettings.timezone);
+        if (remindAt.toEpochSecond() < now.toEpochSecond())
+            throw new CommandException("Please specify a date in the future, I can't change the past!");
+        Duration duration = Duration.between(now, remindAt);
 
         // Create the embed
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Set reminder?");
-        embedBuilder.setDescription("Time is in UTC.");
-        embedBuilder.addField("Date:", remindDT.format(DateTimeFormatter.ofPattern("EEE dd MMMM yyyy")), true);
-        embedBuilder.addField("Time:", remindDT.format(DateTimeFormatter.ofPattern("hh:mm:ss a")), true);
-        embedBuilder.addField("Duration:", durationToString(duration), false);
+        embedBuilder.setDescription("I'll ping you in this channel or in DM's when it's time.");
+        embedBuilder.addField("Remind Time:", userSettings.getLongDateTime(remindAt.toEpochSecond()), true);
+        embedBuilder.addField("Duration until:", durationToString(duration), false);
+        embedBuilder.setFooter(String.format("Date/Time is shown in your set timezone (%s)", userSettings.timezone.getId()));
 
         // Ignore if they change their mind
         if (!sendConfirmation(ctx, embedBuilder.build())) {
@@ -159,6 +159,7 @@ public class Reminders extends MistyCog {
 
     /**
      * Deletes a document from the database
+     *
      * @param document The document to delete
      */
     private void deleteDoc(Document document) {
@@ -167,21 +168,23 @@ public class Reminders extends MistyCog {
 
     /**
      * Turns a duration object into a string.
+     *
      * @param duration The duration to convert
      * @return The output string
      */
     private String durationToString(Duration duration) {
         String output = "";
-        output += (duration.toDays() != 0) ? String.format(" %s, ", Helper.singularPlural((int) duration.toDays(), "Day", "Days")) : "";
-        output += (duration.toHoursPart() != 0) ? String.format(" %s, ", Helper.singularPlural(duration.toHoursPart(), "Hour", "Hours")) : "";
-        output += (duration.toMinutesPart() != 0) ? String.format(" %s, ", Helper.singularPlural(duration.toMinutesPart(), "Minute", "Minutes")) : "";
-        output += (duration.toSecondsPart() != 0) ? String.format(" %s, ", Helper.singularPlural(duration.toSecondsPart(), "Second", "Seconds")) : "";
+        output += (duration.toDays() != 0) ? String.format("%s %s, ", duration.toDays(), Helper.singularPlural((int) duration.toDays(), "Day", "Days")) : "";
+        output += (duration.toHoursPart() != 0) ? String.format("%s %s, ", duration.toHoursPart(), Helper.singularPlural(duration.toHoursPart(), "Hour", "Hours")) : "";
+        output += (duration.toMinutesPart() != 0) ? String.format("%s %s, ", duration.toMinutesPart(), Helper.singularPlural(duration.toMinutesPart(), "Minute", "Minutes")) : "";
+        output += (duration.toSecondsPart() != 0) ? String.format("%s %s, ", duration.toSecondsPart(), Helper.singularPlural(duration.toSecondsPart(), "Second", "Seconds")) : "";
         return output;
     }
 
     /**
      * Called by the paginator to prompt the user if they want to delete a reminder and delete it if so.
-     * @param ctx The current context
+     *
+     * @param ctx      The current context
      * @param document The document to delete
      * @return If the delete was successful
      */

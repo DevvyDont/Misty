@@ -65,7 +65,7 @@ public class Utilities extends MistyCog {
         int menuOption = Menu.showMenu(
                 ctx,
                 "What would you like to edit?",
-                new String[] {
+                new String[]{
                         "Change Timezone",
                         "Change Language",
                         "Set Preferred Name"

@@ -4,14 +4,11 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.User;
 import org.bson.Document;
 import sh.niall.misty.Misty;
-import sh.niall.yui.Yui;
 import sh.niall.yui.commands.Context;
 import sh.niall.yui.exceptions.CommandException;
 
-import java.awt.*;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -20,7 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class UserSettings {
-    final static public String[] timezones = new String[] {
+    final static public String[] timezones = new String[]{
             "Asia/Dubai (UTC +4)",
             "Europe/Paris (UTC +1)",
             "UTC (Default Time)",
@@ -29,7 +26,7 @@ public class UserSettings {
             "America/Chicago (Central)",
             "America/Los_Angeles (Pacific)"
     };
-    final static public String[] languages = new String[] {
+    final static public String[] languages = new String[]{
             "English \uD83C\uDDEC\uD83C\uDDE7/\uD83C\uDDFA\uD83C\uDDF8"
     };
     final static DateTimeFormatter shortDateUS = DateTimeFormatter.ofPattern("MM/dd/yyyy");
@@ -49,6 +46,10 @@ public class UserSettings {
     public ZoneId timezone = ZoneId.of("UTC");
     public Languages language = Languages.English;
     public String preferredName = "";
+
+    public UserSettings(Context ctx) throws CommandException {
+        this(ctx.getAuthor().getIdLong());
+    }
 
     public UserSettings(long userId) throws CommandException {
         this.userId = userId;

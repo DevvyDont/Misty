@@ -9,12 +9,12 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
-import sh.niall.misty.utils.audio.AudioGuild;
-import sh.niall.misty.utils.audio.AudioGuildManager;
-import sh.niall.misty.utils.audio.helpers.TrackRequest;
 import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
+import sh.niall.misty.utils.audio.AudioGuild;
+import sh.niall.misty.utils.audio.AudioGuildManager;
 import sh.niall.misty.utils.audio.AudioUtils;
+import sh.niall.misty.utils.audio.helpers.TrackRequest;
 import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.paginator.Paginator;
@@ -25,6 +25,7 @@ import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.WaiterException;
 
 import java.awt.*;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -400,6 +401,12 @@ public class Music extends Cog {
         }
 
         // Add total time
+        UserSettings userSettings = new UserSettings(ctx);
+        String a = String.format(
+                "Total time remaining: %s\nEnding at %s",
+                AudioUtils.durationToString(queueTotalTime),
+                userSettings.getShortDateTime(ZonedDateTime.now(userSettings.timezone).plusNanos(TimeUnit.MILLISECONDS.toNanos(queueTotalTime)).toEpochSecond())
+        );
         String totalTimeString = "Total time remaining: " + AudioUtils.durationToString(queueTotalTime);
         for (EmbedBuilder embedBuilder : embedBuilders)
             embedBuilder.setDescription(totalTimeString);

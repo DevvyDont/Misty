@@ -3,8 +3,6 @@ package sh.niall.misty.utils.playlists;
 import com.linkedin.urls.Url;
 import com.linkedin.urls.detection.UrlDetector;
 import com.linkedin.urls.detection.UrlDetectorOptions;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.User;
 import sh.niall.misty.utils.playlists.containers.PlaylistLookupContainer;
 import sh.niall.misty.utils.playlists.containers.PlaylistUrlsContainer;
 import sh.niall.yui.commands.Context;

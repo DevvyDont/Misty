@@ -1,7 +1,7 @@
 package sh.niall.misty.utils.settings;
 
 public enum Languages {
-    English (0);
+    English(0);
 
     private final int id;
 

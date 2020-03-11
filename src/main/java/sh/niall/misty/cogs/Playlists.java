@@ -39,8 +39,6 @@ import sh.niall.yui.exceptions.WaiterException;
 import java.awt.*;
 import java.io.IOException;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -504,7 +502,7 @@ public class Playlists extends MistyCog {
                     AudioTrack audioTrack = songCache.getTrack(ctx.getGuild(), url);
                     String builder = "Duration: " + AudioUtils.durationToString(audioTrack.getInfo().length) + "\n" +
                             "Added By: " + UserSettings.getName(ctx, playlistSong.addedBy) + "\n" +
-                            "Added: " + Instant.ofEpochSecond(playlistSong.addedTimestamp).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("dd MMM yyyy")) + "\n" +
+                            "Added: " + new UserSettings(playlistSong.addedBy).getLongDate(playlistSong.addedTimestamp) + "\n" +
                             "Url: " + url;
                     embedBuilder.addField(audioTrack.getInfo().title, builder, true);
                 }

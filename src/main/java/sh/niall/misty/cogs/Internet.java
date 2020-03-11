@@ -15,7 +15,6 @@ import sh.niall.yui.commands.interfaces.Command;
 import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.WaiterException;
 
-import java.awt.*;
 import java.io.IOException;
 import java.text.ParseException;
 import java.time.LocalDate;

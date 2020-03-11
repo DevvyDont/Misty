@@ -9,7 +9,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import sh.niall.misty.Misty;
 import sh.niall.misty.utils.misty.MistyCog;
-import sh.niall.misty.utils.playlists.PlaylistUtils;
 import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.tags.Tag;
 import sh.niall.misty.utils.ui.Helper;
@@ -22,9 +21,6 @@ import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.WaiterException;
 
 import java.awt.*;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -111,7 +107,7 @@ public class Tags extends MistyCog {
         embedBuilder.setColor(Color.RED);
         embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
         embedBuilder.addField("Content: ", tag.body, false);
-        embedBuilder.addField("Created: ", Instant.ofEpochSecond(tag.timestamp).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("dd MMM yyyy")), true);
+        embedBuilder.addField("Created: ", new UserSettings(ctx).getLongDateTime(tag.timestamp), true);
         embedBuilder.addField("Uses: ", String.valueOf(tag.uses), true);
 
         // Delete if confirmed
@@ -285,7 +281,6 @@ public class Tags extends MistyCog {
         ctx.send(embedBuilder.build());
     }
 
-    // TODO: CLEAN THIS DISPLAY UP
     @GroupCommand(group = "tag", name = "list", aliases = {"l"})
     public void _commandList(Context ctx) throws CommandException, WaiterException {
         // If they provided an argument, see if it's a possible target

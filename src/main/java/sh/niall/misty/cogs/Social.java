@@ -9,7 +9,6 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import sh.niall.misty.Misty;
-import sh.niall.misty.utils.playlists.PlaylistUtils;
 import sh.niall.misty.utils.misty.MistyCog;
 import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.yui.commands.Context;
