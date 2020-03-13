@@ -3,6 +3,7 @@ package sh.niall.misty.utils.playlists;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import sh.niall.misty.utils.playlists.containers.PlaylistSong;
 import sh.niall.misty.utils.playlists.enums.Permission;
@@ -46,18 +47,23 @@ public class Playlist {
     /**
      * Loads the document from the database, throws an error if a document isn't found or is private
      *
-     * @param db           The playlist Mongo Collection
-     * @param author       The current owner of the playlist
-     * @param friendlyName The current friendly name of the playlist
-     * @param searchName   The current search name of the playlist
+     * @param db         The playlist Mongo Collection
+     * @param author     The current owner of the playlist
+     * @param invoker    The user who invoked the query
+     * @param searchName The current search name of the playlist
      */
-    public Playlist(MongoCollection<Document> db, long author, String friendlyName, String searchName) throws CommandException {
+    public Playlist(MongoCollection<Document> db, long author, long invoker, String searchName) throws CommandException {
         // Get the document from the database
-        Document document = db.find(Filters.and(Filters.eq("author", author), Filters.eq("searchName", searchName))).first();
-        if (document == null)
-            throw new CommandException("I can't find playlist `" + searchName + "`");
-
         this.db = db;
+        Document document = db.find(Filters.and(Filters.eq("author", author), Filters.eq("searchName", searchName))).first();
+        if (document == null) {
+            List<String> suggestions = getSuggestions(author, invoker, searchName);
+            throw new CommandException(String.format(
+                    "I can't find playlist `%s`\n%s",
+                    searchName,
+                    (suggestions.isEmpty()) ? "" : "Did you mean? \n- " + String.join("\n- ", suggestions)
+            ));
+        }
         loadFromDocument(document);
     }
 
@@ -193,6 +199,21 @@ public class Playlist {
      */
     public void delete() {
         db.deleteOne(Filters.eq("_id", originalDocument.get("_id", ObjectId.class)));
+    }
+
+    private List<String> getSuggestions(long owner, long searcher, String queryString) {
+        List<String> output = new ArrayList<>();
+        List<Bson> filters = new ArrayList<>();
+        for (String query : queryString.split(" "))
+            filters.add(Filters.regex("searchName", String.format(".*%s.*", query)));
+
+        for (Document document : db.find(Filters.and(Filters.eq("author", owner), Filters.or(filters)))) {
+            Playlist playlist = new Playlist(db, document);
+            Permission permission = playlist.getUserPermission(searcher);
+            if (!permission.equals(Permission.NONE))
+                output.add(playlist.friendlyName);
+        }
+        return output;
     }
 
     /**
