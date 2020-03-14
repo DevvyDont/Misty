@@ -50,9 +50,9 @@ public class Playlists extends MistyCog {
     private SongCache songCache;
 
     // Default values
-    private int maxPlaylists = 10;
-    private int playlistSongLimit = 150;
-    private int maxEditors = 3;
+    private static int maxPlaylists = 10;
+    private static int playlistSongLimit = 150;
+    private static int maxEditors = 3;
 
     public Playlists(AudioGuildManager audioGuildManager, SongCache songCache) {
         this.audioGuildManager = audioGuildManager;
@@ -87,9 +87,9 @@ public class Playlists extends MistyCog {
 
     @GroupCommand(group = "playlist", name = "delete", aliases = {"d"})
     public void _commandDelete(Context ctx) throws CommandException, WaiterException {
-        // Get the playlist
+        // Get the playlist - No permission check as we're searching the users playlists
         String friendlyName = String.join(" ", ctx.getArgsStripped());
-        Playlist playlist = new Playlist(this.db, ctx.getAuthor().getIdLong(), friendlyName, Playlist.generateSearchName(friendlyName));
+        Playlist playlist = new Playlist(this.db, ctx.getAuthor().getIdLong(), ctx.getAuthor().getIdLong(), Playlist.generateSearchName(friendlyName));
 
         // Convert editors to real names
         StringBuilder stringBuilder = new StringBuilder();
@@ -118,9 +118,9 @@ public class Playlists extends MistyCog {
 
     @GroupCommand(group = "playlist", name = "edit", aliases = {"e"})
     public void _commandEdit(Context ctx) throws CommandException, WaiterException {
-        // Get the playlist
+        // Get the playlist - No permission check as we're searching the users playlists
         String friendlyName = String.join(" ", ctx.getArgsStripped());
-        Playlist playlist = new Playlist(this.db, ctx.getAuthor().getIdLong(), friendlyName, Playlist.generateSearchName(friendlyName));
+        Playlist playlist = new Playlist(this.db, ctx.getAuthor().getIdLong(), ctx.getAuthor().getIdLong(), Playlist.generateSearchName(friendlyName));
 
         // Setup the update information
         EmbedBuilder embedBuilder = new EmbedBuilder()
@@ -338,7 +338,7 @@ public class Playlists extends MistyCog {
     public void _commandAdd(Context ctx) throws CommandException, AudioException, MistyException, IOException, WaiterException {
         // First translate our arguments into data
         PlaylistUrlsContainer results = PlaylistUtils.getPlaylistAndURLs(ctx);
-        Playlist playlist = new Playlist(db, results.targetId, results.playlistName, Playlist.generateSearchName(results.playlistName));
+        Playlist playlist = new Playlist(db, results.targetId, ctx.getAuthor().getIdLong(), Playlist.generateSearchName(results.playlistName));
 
         // Check invokers permissions
         Permission permission = playlist.getUserPermission(ctx.getAuthor().getIdLong());
@@ -412,7 +412,7 @@ public class Playlists extends MistyCog {
     public void _commandRemove(Context ctx) throws CommandException, WaiterException {
         // First translate our arguments into data
         PlaylistUrlsContainer results = PlaylistUtils.getPlaylistAndURLs(ctx);
-        Playlist playlist = new Playlist(db, results.targetId, results.playlistName, Playlist.generateSearchName(results.playlistName));
+        Playlist playlist = new Playlist(db, results.targetId, ctx.getAuthor().getIdLong(), Playlist.generateSearchName(results.playlistName));
 
         // Check invokers permissions
         Permission permission = playlist.getUserPermission(ctx.getAuthor().getIdLong());
@@ -476,7 +476,7 @@ public class Playlists extends MistyCog {
 
         } else { // Display the specified playlist
             // Get the playlist
-            Playlist playlist = new Playlist(db, result.targetId, result.playlistName, Playlist.generateSearchName(result.playlistName));
+            Playlist playlist = new Playlist(db, result.targetId, ctx.getAuthor().getIdLong(), Playlist.generateSearchName(result.playlistName));
             Permission permission = playlist.getUserPermission(ctx.getAuthor().getIdLong());
             if (permission.equals(Permission.NONE))
                 throw new CommandException("I can't find playlist `" + playlist.searchName + "`");
@@ -526,7 +526,12 @@ public class Playlists extends MistyCog {
             throw new CommandException("Please provide a playlist name to play!");
 
         // Find the playlist (throws command exception if it can't find)
-        Playlist playlist = new Playlist(db, result.targetId, result.playlistName, Playlist.generateSearchName(result.playlistName));
+        Playlist playlist = new Playlist(db, result.targetId, ctx.getAuthor().getIdLong(), Playlist.generateSearchName(result.playlistName));
+
+        // Check their permission level
+        Permission permission = playlist.getUserPermission(ctx.getAuthor().getIdLong());
+        if (permission.equals(Permission.NONE))
+            throw new CommandException("I can't find playlist `" + playlist.searchName + "`");
 
         // Get the audio guild and check the queue has enough room
         AudioGuild audioGuild = audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong());
@@ -553,5 +558,6 @@ public class Playlists extends MistyCog {
         // Inform the invoker
         ctx.send(String.format("Added `%s` %s from the `%s` playlist to the queue!", songList.size(), Helper.singularPlural(songList.size(), "song", "songs"), playlist.friendlyName));
     }
+
 
 }
