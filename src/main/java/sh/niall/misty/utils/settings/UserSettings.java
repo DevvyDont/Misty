@@ -2,8 +2,10 @@ package sh.niall.misty.utils.settings;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
+import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.User;
 import org.bson.Document;
 import sh.niall.misty.Misty;
 import sh.niall.yui.commands.Context;
@@ -140,5 +142,14 @@ public class UserSettings {
         } catch (CommandException ignored) {
             return "Unknown User ( " + targetId + ")";
         }
+    }
+
+    public static String getAvatarUrl(Context ctx, long userId) {
+        return getAvatarUrl(ctx.getBot(), userId);
+    }
+
+    public static String getAvatarUrl(JDA jda, long userId) {
+        User user = jda.retrieveUserById(userId).complete();
+        return (user == null) ? null : user.getEffectiveAvatarUrl();
     }
 }

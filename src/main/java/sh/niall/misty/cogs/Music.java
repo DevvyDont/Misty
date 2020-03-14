@@ -245,15 +245,13 @@ public class Music extends Cog {
                 AudioUtils.durationToString(trackRequest.audioTrack.getPosition()),
                 AudioUtils.durationToString(trackRequest.audioTrack.getDuration())
         );
-        Member requester = ctx.getGuild().getMemberById(trackRequest.requestAuthor);
-        // TODO fix this
 
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Now Playing!", trackRequest.audioTrack.getInfo().uri);
         embedBuilder.setDescription("From " + StringUtils.capitalize(trackRequest.audioTrack.getSourceManager().getSourceName()));
         embedBuilder.setImage(audioGuild.getArtwork());
         embedBuilder.setColor(Helper.randomColor());
-        embedBuilder.setAuthor("Requested by: " + UserSettings.getName(ctx, trackRequest.requestAuthor), null, requester.getUser().getEffectiveAvatarUrl());
+        embedBuilder.setAuthor("Requested by: " + UserSettings.getName(ctx, trackRequest.requestAuthor), null, UserSettings.getAvatarUrl(ctx, trackRequest.requestAuthor));
         embedBuilder.addField("Title:", trackRequest.audioTrack.getInfo().title, true);
         embedBuilder.addField("Duration:", duration, false);
         embedBuilder.addField("Volume:", audioGuild.getVolume() + "%", true);
@@ -372,9 +370,9 @@ public class Music extends Cog {
 
         // Setup the song loop
         List<EmbedBuilder> embedBuilders = new ArrayList<>();
+        Color embedColor = Helper.randomColor();
         long queueTotalTime = 0;
         int trackNumber = 1;
-        Color embedColor = Helper.randomColor();
 
         // Loop over all the songs and add them to the queue
         for (List<TrackRequest> requests : ListUtils.partition(new ArrayList<>(audioGuild.getQueue()), 5)) {
