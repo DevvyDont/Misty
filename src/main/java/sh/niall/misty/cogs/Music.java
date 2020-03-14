@@ -25,7 +25,6 @@ import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.WaiterException;
 
 import java.awt.*;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -401,15 +400,9 @@ public class Music extends Cog {
         }
 
         // Add total time
-        UserSettings userSettings = new UserSettings(ctx);
-        String a = String.format(
-                "Total time remaining: %s\nEnding at %s",
-                AudioUtils.durationToString(queueTotalTime),
-                userSettings.getShortDateTime(ZonedDateTime.now(userSettings.timezone).plusNanos(TimeUnit.MILLISECONDS.toNanos(queueTotalTime)).toEpochSecond())
-        );
-        String totalTimeString = "Total time remaining: " + AudioUtils.durationToString(queueTotalTime);
+        String queueTime = String.format("Total time remaining: %s\n", AudioUtils.durationToString(queueTotalTime));
         for (EmbedBuilder embedBuilder : embedBuilders)
-            embedBuilder.setDescription(totalTimeString);
+            embedBuilder.setDescription(queueTime + embedBuilder.getDescriptionBuilder().toString());
 
         // Run the paginator
         Paginator paginator = new Paginator(ctx, embedBuilders, 160, true);
