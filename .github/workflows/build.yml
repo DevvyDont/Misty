@@ -24,30 +24,13 @@ jobs:
       - name: Create Shadow Jar
         run: ./gradlew shadowJar
 
-      - name: Get timestamp for release name
-        uses: actions/github-script@0.8.0
-        id: timestamp
-        with:
-          script: return Math.floor(new Date().getTime() / 1000);
-
-      - name: Create new release
-        id: create-release
-        uses: actions/create-release@latest
+      - name: Upload Release Asset
+        uses: gfreezy/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.timestamp.outputs.result }}
-          release_name: Release ${{ steps.timestamp.outputs.result }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Jar
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          upload_url: https://uploads.github.com/repos/niallsh/Misty/releases/24579082/assets{?name,label}
+          release_id: 24579082
           asset_path: ./build/libs/Misty-1.0-all.jar
           asset_name: Misty.jar
           asset_content_type: application/java-archive
