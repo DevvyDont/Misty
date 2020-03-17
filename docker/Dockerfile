@@ -4,4 +4,4 @@ WORKDIR '/app'
 
 COPY . .
 
-CMD ["java", "-jar", "Misty.jar"]
+CMD ["./start.sh"]

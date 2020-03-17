@@ -7,13 +7,14 @@ services:
     - mongo_data:/data/db
     ports:
     - 127.0.0.1:27017:27017
+    restart: always:5
 
   misty:
     build: ./Misty
     container_name: "misty"
     depends_on:
       - mongo
-    restart: on-failure:15
+    restart: always:5
 
 volumes:
   mongo_data:

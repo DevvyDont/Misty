@@ -24,6 +24,7 @@ public class Misty {
     public static Config config;
     public static Database database;
     public static Yui yui;
+    public static Long ownerId = null;
 
     public static void main(String[] args) throws LoginException, FileNotFoundException, PrefixException, CommandException {
         // Initialize globals
@@ -45,6 +46,7 @@ public class Misty {
 
         // Add the cogs in
         yui.addCogs(
+                new Admin(),
                 new Internet(),
                 new Help(),
                 new Music(audioGuildManager),
