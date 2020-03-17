@@ -4,6 +4,7 @@ currenthash=$(md5sum Misty.jar | cut -d ' ' -f 1)
 
 if [ "$latest" != "$currenthash" ]
 then
+    echo "Found a new jar, downloading!"
     wget -q https://github.com/niallsh/Misty/releases/latest/download/Misty.jar -O ./Misty.jar
 fi
 
