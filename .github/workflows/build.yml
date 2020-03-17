@@ -34,3 +34,26 @@ jobs:
           asset_path: ./build/libs/Misty-1.0-all.jar
           asset_name: Misty.jar
           asset_content_type: application/java-archive
+
+      - name: Get Jar MD5 hash
+        uses: niallsh/md5-hash@v1.0
+        id: jarhash
+        with:
+          file-path: ./build/libs/Misty-1.0-all.jar
+
+      - name: Create manifest file
+        uses: niallsh/file-action@v1.0
+        with:
+          file-path: ./manifest.txt
+          content: ${{ steps.jarhash.outputs.hash }}
+
+      - name: Upload manifest
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: https://uploads.github.com/repos/niallsh/Misty/releases/24579082/assets{?name,label}
+          release_id: 24579082
+          asset_path: ./manifest.txt
+          asset_name: manifest.txt
+          asset_content_type: text/plain
