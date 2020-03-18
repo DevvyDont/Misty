@@ -32,9 +32,9 @@ public class Internet extends Cog {
     final DateTimeFormatter urbanInput = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Command(name = "dog", aliases = {"puppo", "puppos"})
-    public void _commandDog(Context context) throws IOException, CommandException {
+    public void _commandDog(Context ctx) throws IOException, CommandException {
         // We're doing a request, so send a typing message
-        context.getChannel().sendTyping().queue();
+        ctx.getChannel().sendTyping().queue();
 
         // Request a resource
         Response resourceRequest = client.newCall(new Request.Builder().url("https://random.dog/woof").build()).execute();
@@ -59,14 +59,14 @@ public class Internet extends Cog {
 
         // Videos can't be embed, so we have to upload them differently
         if (fileName.endsWith(".mp4") || fileName.endsWith(".webm")) {
-            context.getChannel().sendFile(dogRequest.body().byteStream(), fileName).content("Here's a 🐶 Video:").complete();
+            ctx.getChannel().sendFile(dogRequest.body().byteStream(), fileName).content("Here's a 🐶 Video:").complete();
         } else {
             EmbedBuilder embedBuilder = new EmbedBuilder();
             embedBuilder.setTitle("Dog Photo!");
             embedBuilder.setDescription(dogChoices[(int) (Math.random() * dogChoices.length)]);
             embedBuilder.setColor(Helper.randomColor());
             embedBuilder.setImage(url);
-            context.send(embedBuilder.build());
+            ctx.send(embedBuilder.build());
         }
 
         // Close the request
@@ -75,8 +75,8 @@ public class Internet extends Cog {
     }
 
     @Command(name = "cat", aliases = {"meow"})
-    public void _commandCat(Context context) throws IOException, CommandException {
-        context.getChannel().sendTyping().queue();
+    public void _commandCat(Context ctx) throws IOException, CommandException {
+        ctx.getChannel().sendTyping().queue();
 
         // Request a resource
         Response resourceRequest = client.newCall(new Request.Builder().url("https://api.thecatapi.com/v1/images/search").build()).execute();
@@ -96,12 +96,12 @@ public class Internet extends Cog {
         embedBuilder.setDescription(catChoices[(int) (Math.random() * catChoices.length)]);
         embedBuilder.setColor(Helper.randomColor());
         embedBuilder.setImage((String) jsonObject.get("url"));
-        context.send(embedBuilder.build());
+        ctx.send(embedBuilder.build());
     }
 
     @Command(name = "fox")
-    public void _commandFox(Context context) throws IOException, CommandException {
-        context.getChannel().sendTyping().queue();
+    public void _commandFox(Context ctx) throws IOException, CommandException {
+        ctx.getChannel().sendTyping().queue();
 
         // Request a resource
         Response resourceRequest = client.newCall(new Request.Builder().url("https://randomfox.ca/floof").build()).execute();
@@ -121,7 +121,7 @@ public class Internet extends Cog {
         embedBuilder.setDescription(foxChoices[(int) (Math.random() * foxChoices.length)]);
         embedBuilder.setColor(Helper.randomColor());
         embedBuilder.setImage((String) jsonObject.get("image"));
-        context.send(embedBuilder.build());
+        ctx.send(embedBuilder.build());
     }
 
     @Command(name = "urbandictionary", aliases = {"ud", "urban"})
@@ -159,5 +159,79 @@ public class Internet extends Cog {
             ctx.send("I found no results for the word: " + word);
         else
             new Paginator(ctx, embedBuilders, 160, true).run();
+    }
+
+    @Command(name = "love")
+    public void _commandLove(Context ctx) throws IOException, CommandException {
+        ctx.getChannel().sendTyping().queue();
+
+        // Request a resource
+        Response resourceRequest = client.newCall(new Request.Builder().url("https://niallsh.github.io/CDN/misty-bot/love/manifest.json").build()).execute();
+
+        // Ensure we got through
+        if (resourceRequest.code() != 200) {
+            resourceRequest.close();
+            throw new CommandException("I tried to find an image, but I failed!");
+        }
+
+        // Covert string to JSON
+        JSONObject jsonObject = new JSONObject(resourceRequest.body().string());
+        JSONArray imageArray = jsonObject.getJSONArray("images");
+        String location = (String) jsonObject.get("location");
+
+        // Get the target name
+        // Work out the target
+        long target = ctx.getAuthor().getIdLong();
+        if (!ctx.getArgsStripped().isEmpty()) {
+            String possibleTarget = ctx.getArgsStripped().get(0).replace("<@!", "").replace("<@", "").replace(">", "");
+            int length = possibleTarget.length();
+            if (15 <= length && length <= 21 && possibleTarget.matches("\\d+"))
+                target = Long.parseLong(possibleTarget);
+        }
+
+        // Create the embed
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+        embedBuilder.setTitle(String.format("Love you %s!", UserSettings.getName(target)));
+        embedBuilder.setDescription("\uD83D\uDC95");
+        embedBuilder.setColor(Helper.randomColor());
+        embedBuilder.setImage(location + imageArray.get((int) (Math.random() * imageArray.length())));
+        ctx.send(String.format("<@%s>", target), embedBuilder.build());
+    }
+
+    @Command(name = "cuddle")
+    public void _commandCuddle(Context ctx) throws IOException, CommandException {
+        ctx.getChannel().sendTyping().queue();
+
+        // Request a resource
+        Response resourceRequest = client.newCall(new Request.Builder().url("https://niallsh.github.io/CDN/misty-bot/cuddle/manifest.json").build()).execute();
+
+        // Ensure we got through
+        if (resourceRequest.code() != 200) {
+            resourceRequest.close();
+            throw new CommandException("I tried to find an image, but I failed!");
+        }
+
+        // Covert string to JSON
+        JSONObject jsonObject = new JSONObject(resourceRequest.body().string());
+        JSONArray imageArray = jsonObject.getJSONArray("images");
+        String location = (String) jsonObject.get("location");
+
+        // Get the target name
+        // Work out the target
+        long target = ctx.getAuthor().getIdLong();
+        if (!ctx.getArgsStripped().isEmpty()) {
+            String possibleTarget = ctx.getArgsStripped().get(0).replace("<@!", "").replace("<@", "").replace(">", "");
+            int length = possibleTarget.length();
+            if (15 <= length && length <= 21 && possibleTarget.matches("\\d+"))
+                target = Long.parseLong(possibleTarget);
+        }
+
+        // Create the embed
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+        embedBuilder.setTitle(String.format("Cuddle for you %s!", UserSettings.getName(target)));
+        embedBuilder.setDescription("\uD83D\uDC95");
+        embedBuilder.setColor(Helper.randomColor());
+        embedBuilder.setImage(location + imageArray.get((int) (Math.random() * imageArray.length())));
+        ctx.send(String.format("<@%s>", target), embedBuilder.build());
     }
 }
