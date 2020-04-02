@@ -135,7 +135,7 @@ public class Music extends Cog {
         ctx.send("Resuming! The current song is: " + audioGuild.getCurrentSong().audioTrack.getInfo().title);
     }
 
-    @Command(name = "stop")
+    @Command(name = "stop", aliases = {"leave", "disconnect"})
     public void _commandStop(Context ctx) throws CommandException {
         if (!AudioUtils.userInSameChannel(ctx))
             throw new CommandException("You can't stop the music as we're not in the same voice channel!");
