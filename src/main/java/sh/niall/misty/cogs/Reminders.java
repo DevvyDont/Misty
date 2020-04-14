@@ -19,6 +19,7 @@ import sh.niall.misty.utils.ui.Helper;
 import sh.niall.yui.cogs.commands.annotations.Group;
 import sh.niall.yui.cogs.commands.annotations.GroupCommand;
 import sh.niall.yui.cogs.commands.context.Context;
+import sh.niall.yui.cogs.commands.help.annotations.CommandHelp;
 import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.YuiException;
 import sh.niall.yui.tasks.interfaces.Loop;
@@ -35,6 +36,11 @@ public class Reminders extends MistyCog {
 
     private MongoCollection<Document> db = Misty.database.getCollection("reminders");
 
+    public Reminders() {
+        this.cogDescription = "Everything to do with Reminders";
+    }
+
+    @CommandHelp(desc = "Create reminders to remind you of something in the future.", arguments = {"When to remind you"})
     @Group(name = "remind", aliases = {"reminders"})
     public void _commandGroup(Context ctx) throws YuiException {
         if (ctx.didSubCommandRun())
@@ -78,6 +84,7 @@ public class Reminders extends MistyCog {
         ctx.send("Ok, I'll remind you!");
     }
 
+    @CommandHelp(desc = "View and Delete your reminders")
     @GroupCommand(group = "remind", name = "list")
     public void _commandList(Context ctx) throws YuiException {
         Map<EmbedBuilder, Document> pages = new HashMap<>();

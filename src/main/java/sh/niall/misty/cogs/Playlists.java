@@ -33,6 +33,7 @@ import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.cogs.commands.annotations.Group;
 import sh.niall.yui.cogs.commands.annotations.GroupCommand;
 import sh.niall.yui.cogs.commands.context.Context;
+import sh.niall.yui.cogs.commands.help.annotations.CommandHelp;
 import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.YuiException;
 
@@ -57,14 +58,17 @@ public class Playlists extends MistyCog {
     public Playlists(AudioGuildManager audioGuildManager, SongCache songCache) {
         this.audioGuildManager = audioGuildManager;
         this.songCache = songCache;
+        this.cogDescription = "Everything to do with playlists!";
     }
 
-    @Group(name = "playlist", aliases = {"pl"})
+    @CommandHelp(desc = "Commands for handling playlists")
+    @Group(name = "playlist", aliases = {"pl", "playlists"})
     public void _commandPlaylist(Context ctx) throws CommandException {
         if (!ctx.didSubCommandRun())
             throw new CommandException("No sub command ran, please see help for a list of playlist commands");
     }
 
+    @CommandHelp(desc = "Creates a new playlist", arguments = {"Playlist Name"})
     @GroupCommand(group = "playlist", name = "create", aliases = {"c"})
     public void _commandCreate(Context ctx) throws CommandException {
         if (ctx.getArguments().isEmpty())
@@ -85,6 +89,7 @@ public class Playlists extends MistyCog {
         ctx.send("Playlist " + friendlyName + " created!");
     }
 
+    @CommandHelp(desc = "Deletes a playlist", arguments = {"Playlist Name"})
     @GroupCommand(group = "playlist", name = "delete", aliases = {"d"})
     public void _commandDelete(Context ctx) throws YuiException {
         // Get the playlist - No permission check as we're searching the users playlists
@@ -116,6 +121,7 @@ public class Playlists extends MistyCog {
         }
     }
 
+    @CommandHelp(desc = "Edit a playlists information", arguments = {"Playlist Name"})
     @GroupCommand(group = "playlist", name = "edit", aliases = {"e"})
     public void _commandEdit(Context ctx) throws YuiException {
         // Get the playlist - No permission check as we're searching the users playlists
@@ -334,6 +340,7 @@ public class Playlists extends MistyCog {
         }
     }
 
+    @CommandHelp(desc = "Add a song to a playlist", arguments = {"Playlist name", "Song URL/s"})
     @GroupCommand(group = "playlist", name = "add", aliases = {"a"})
     public void _commandAdd(Context ctx) throws YuiException, IOException {
         // First translate our arguments into data
@@ -408,6 +415,7 @@ public class Playlists extends MistyCog {
         }
     }
 
+    @CommandHelp(desc = "Removes a song from a playlist", arguments = {"Playlist name", "Song URL/s"})
     @GroupCommand(group = "playlist", name = "remove", aliases = {"r"})
     public void _commandRemove(Context ctx) throws YuiException {
         // First translate our arguments into data
@@ -437,6 +445,7 @@ public class Playlists extends MistyCog {
 
     }
 
+    @CommandHelp(desc = "Shows a users playlist or the content of a playlist", arguments = {"Optional: User Mention", "Optional: Playlist name"})
     @GroupCommand(group = "playlist", name = "list", aliases = {"l"})
     public void _commandList(Context ctx) throws YuiException, IOException {
         PlaylistLookupContainer result = PlaylistUtils.getTargetAndName(ctx);
@@ -515,6 +524,7 @@ public class Playlists extends MistyCog {
         paginator.run();
     }
 
+    @CommandHelp(desc = "Plays a playlist", arguments = {"Playlist name"})
     @GroupCommand(group = "playlist", name = "play", aliases = {"p"})
     public void _commandPlay(Context ctx) throws CommandException, InterruptedException, AudioException, MistyException, IOException {
         // Handle summon checks

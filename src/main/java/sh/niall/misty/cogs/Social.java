@@ -14,6 +14,7 @@ import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.yui.cogs.commands.annotations.Group;
 import sh.niall.yui.cogs.commands.annotations.GroupCommand;
 import sh.niall.yui.cogs.commands.context.Context;
+import sh.niall.yui.cogs.commands.help.annotations.CommandHelp;
 import sh.niall.yui.exceptions.CogException;
 import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.YuiException;
@@ -24,6 +25,11 @@ public class Social extends MistyCog {
 
     MongoCollection<Document> db = Misty.database.getCollection("social");
 
+    public Social() {
+        this.cogDescription = "A collection of social tools";
+    }
+
+    @CommandHelp(desc = "View your own or someone else's personal bio", arguments = {"Optional: User Mention"})
     @Group(name = "bio")
     public void _commandInfo(Context ctx) throws CogException {
         // Make sure a sub command didn't run!
@@ -52,6 +58,7 @@ public class Social extends MistyCog {
         ctx.send(document.getString("bio"));
     }
 
+    @CommandHelp(desc = "Set your own personal bio", arguments = {"Your new bio"})
     @GroupCommand(group = "bio", name = "set")
     public void _commandSet(Context ctx) throws YuiException {
         if (ctx.getArguments().isEmpty())
@@ -144,6 +151,7 @@ public class Social extends MistyCog {
         }
     }
 
+    @CommandHelp(desc = "Clears your current bio")
     @GroupCommand(group = "bio", name = "clear")
     public void _commandClear(Context ctx) throws YuiException {
         // Check they have a bio

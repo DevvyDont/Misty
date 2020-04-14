@@ -17,6 +17,7 @@ import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.cogs.commands.annotations.Group;
 import sh.niall.yui.cogs.commands.annotations.GroupCommand;
 import sh.niall.yui.cogs.commands.context.Context;
+import sh.niall.yui.cogs.commands.help.annotations.CommandHelp;
 import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.YuiException;
 
@@ -30,7 +31,11 @@ public class Tags extends MistyCog {
     MongoCollection<Document> db = Misty.database.getCollection("tags");
     final static int maxTagsPerMember = 40;
 
+    public Tags() {
+        this.cogDescription = "All of your tagging needs!";
+    }
 
+    @CommandHelp(desc = "Display a tag", arguments = {"Tag Name"})
     @Group(name = "tag", aliases = {"t", "tags"})
     public void _commandTag(Context ctx) throws CommandException {
         // Ignore if sub command was run
@@ -52,6 +57,7 @@ public class Tags extends MistyCog {
         ctx.send(tag.body);
     }
 
+    @CommandHelp(desc = "Create a new tag", arguments = {"Tag Name"})
     @GroupCommand(group = "tag", name = "create", aliases = {"c", "add"})
     public void _commandCreate(Context ctx) throws YuiException {
         // Check we were given an argument
@@ -87,6 +93,7 @@ public class Tags extends MistyCog {
         ctx.send(String.format("Tag `%s` created!", friendlyName));
     }
 
+    @CommandHelp(desc = "Delete a tag!", arguments = {"Tag Name"})
     @GroupCommand(group = "tag", name = "delete", aliases = {"del", "d", "remove"})
     public void _commandDelete(Context ctx) throws YuiException {
         if (ctx.getArguments().isEmpty())
@@ -117,6 +124,7 @@ public class Tags extends MistyCog {
             ctx.send(String.format("Okay! I won't delete tag %s", tag.friendlyName));
     }
 
+    @CommandHelp(desc = "Edit a tag!", arguments = {"Tag Name"})
     @GroupCommand(group = "tag", name = "edit", aliases = {"e"})
     public void _commandEdit(Context ctx) throws YuiException {
         // Check we were given an argument
@@ -249,6 +257,7 @@ public class Tags extends MistyCog {
         }
     }
 
+    @CommandHelp(desc = "Get a tags information", arguments = {"Tag Name"})
     @GroupCommand(group = "tag", name = "info", aliases = {"i"})
     public void _commandInfo(Context ctx) throws CommandException {
         // Check we were given an argument
@@ -281,6 +290,7 @@ public class Tags extends MistyCog {
         ctx.send(embedBuilder.build());
     }
 
+    @CommandHelp(desc = "List all of your tags, or show a users tags", arguments = {"Optional: User Mention"})
     @GroupCommand(group = "tag", name = "list", aliases = {"l"})
     public void _commandList(Context ctx) throws YuiException {
         // If they provided an argument, see if it's a possible target
@@ -331,6 +341,7 @@ public class Tags extends MistyCog {
         paginator.run();
     }
 
+    @CommandHelp(desc = "Claim a tag made by an inactive member", arguments = {"Tag Name"})
     @GroupCommand(group = "tag", name = "claim")
     public void _commandClaim(Context ctx) throws CommandException {
         // Check we were given an argument

@@ -12,6 +12,7 @@ import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.cogs.cog.Cog;
 import sh.niall.yui.cogs.commands.annotations.Command;
 import sh.niall.yui.cogs.commands.context.Context;
+import sh.niall.yui.cogs.commands.help.annotations.CommandHelp;
 import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.YuiException;
 
@@ -30,6 +31,11 @@ public class Internet extends Cog {
     final String[] foxChoices = {"\uD83E\uDD8A Wa-pa-pa-pa-pa-pa-pow! \uD83E\uDD8A", "\uD83E\uDD8A Hatee-hatee-hatee-ho! \uD83E\uDD8A", "\uD83E\uDD8A Joff-tchoff-tchoffo-tchoffo-tchoff! \uD83E\uDD8A", "\uD83E\uDD8A Fraka-kaka-kaka-kaka-kow! \uD83E\uDD8A"};
     final DateTimeFormatter urbanInput = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    public Internet() {
+        this.cogDescription = "A bunch of internet based commands!";
+    }
+
+    @CommandHelp(desc = "Sends a photo or video of a dog.")
     @Command(name = "dog", aliases = {"puppo", "puppos"})
     public void _commandDog(Context ctx) throws IOException, CommandException {
         // We're doing a request, so send a typing message
@@ -73,6 +79,7 @@ public class Internet extends Cog {
         dogRequest.close();
     }
 
+    @CommandHelp(desc = "Sends a photo of a cat.")
     @Command(name = "cat", aliases = {"meow"})
     public void _commandCat(Context ctx) throws IOException, CommandException {
         ctx.getChannel().sendTyping().queue();
@@ -98,6 +105,7 @@ public class Internet extends Cog {
         ctx.send(embedBuilder.build());
     }
 
+    @CommandHelp(desc = "Sends a photo of a fox.")
     @Command(name = "fox")
     public void _commandFox(Context ctx) throws IOException, CommandException {
         ctx.getChannel().sendTyping().queue();
@@ -123,6 +131,7 @@ public class Internet extends Cog {
         ctx.send(embedBuilder.build());
     }
 
+    @CommandHelp(name = "Urban Dictionary", arguments = {"Word to search"}, desc = "Searches the provided word on Urban Dictionary.")
     @Command(name = "urbandictionary", aliases = {"ud", "urban"})
     public void _commandUrban(Context ctx) throws YuiException, IOException {
         if (ctx.getArguments().isEmpty())
@@ -160,6 +169,7 @@ public class Internet extends Cog {
             new Paginator(ctx, embedBuilders, 160, true).run();
     }
 
+    @CommandHelp(desc = "Sends love to you or a friend", arguments = {"Optional: Mention a friend"})
     @Command(name = "love")
     public void _commandLove(Context ctx) throws IOException, CommandException {
         ctx.getChannel().sendTyping().queue();
@@ -197,6 +207,7 @@ public class Internet extends Cog {
         ctx.send(String.format("<@%s>", target), embedBuilder.build());
     }
 
+    @CommandHelp(desc = "Sends cuddles to you or a friend", arguments = {"Optional: Mention a friend"})
     @Command(name = "cuddle")
     public void _commandCuddle(Context ctx) throws IOException, CommandException {
         ctx.getChannel().sendTyping().queue();

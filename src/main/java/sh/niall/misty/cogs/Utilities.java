@@ -7,7 +7,10 @@ import sh.niall.misty.utils.settings.Languages;
 import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.ui.Menu;
 import sh.niall.yui.cogs.commands.annotations.Command;
+import sh.niall.yui.cogs.commands.checks.annotations.Check;
+import sh.niall.yui.cogs.commands.checks.checks.IsGuildMessage;
 import sh.niall.yui.cogs.commands.context.Context;
+import sh.niall.yui.cogs.commands.help.annotations.CommandHelp;
 import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.YuiException;
 
@@ -22,6 +25,7 @@ public class Utilities extends MistyCog {
     /**
      * Sends the specified users avatar!
      */
+    @CommandHelp(desc = "Get a users avatar", arguments = {"Optional: User Mention"})
     @Command(name = "avatar", aliases = {"avi"})
     public void _commandAvatar(Context ctx) throws CommandException {
         // Create the target user
@@ -46,6 +50,8 @@ public class Utilities extends MistyCog {
     /**
      * Sends the screen share link if the user is in a voice channel
      */
+    @Check(check = IsGuildMessage.class)
+    @CommandHelp(name = "Screen Share", desc = "Get the screen share link for your voice channel")
     @Command(name = "screenshare", aliases = {"ss"})
     public void _commandScreenshare(Context ctx) throws CommandException {
         try {
@@ -60,11 +66,13 @@ public class Utilities extends MistyCog {
         }
     }
 
+    @CommandHelp(desc = "Get the link to invite me to your server")
     @Command(name = "invite")
     public void _commandInvite(Context ctx) {
         ctx.send(String.format(inviteLink, getYui().getJda().getSelfUser().getId()));
     }
 
+    @CommandHelp(desc = "Change your Misty settings")
     @Command(name = "settings")
     public void _commandSettings(Context ctx) throws YuiException {
         UserSettings userSettings = new UserSettings(ctx.getAuthor().getIdLong());

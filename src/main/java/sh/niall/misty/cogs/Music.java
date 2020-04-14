@@ -20,6 +20,7 @@ import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.cogs.cog.Cog;
 import sh.niall.yui.cogs.commands.annotations.Command;
 import sh.niall.yui.cogs.commands.context.Context;
+import sh.niall.yui.cogs.commands.help.annotations.CommandHelp;
 import sh.niall.yui.exceptions.CommandException;
 import sh.niall.yui.exceptions.YuiException;
 
@@ -39,6 +40,7 @@ public class Music extends Cog {
     /**
      * Moves the bot to the users voice channel
      */
+    @CommandHelp(desc = "Make me join the voice channel")
     @Command(name = "summon", aliases = {"join"})
     public void _commandSummon(Context ctx) throws CommandException, InterruptedException {
         // Check to see if user is in a voice channel
@@ -64,6 +66,7 @@ public class Music extends Cog {
         ctx.send("Connected to: " + ctx.getAuthor().getVoiceState().getChannel().getName());
     }
 
+    @CommandHelp(desc = "Plays a song", arguments = {"Song URL"})
     @Command(name = "play", aliases = {"p"})
     public void _commandPlay(Context ctx) throws CommandException, InterruptedException, AudioException, MistyException {
         if (ctx.getArguments().isEmpty())
@@ -100,6 +103,7 @@ public class Music extends Cog {
             ctx.send("Added `" + trackList.size() + "` songs to the queue!");
     }
 
+    @CommandHelp(desc = "Pauses the currently playing song")
     @Command(name = "pause")
     public void _commandPause(Context ctx) throws CommandException {
         if (!AudioUtils.userInSameChannel(ctx))
@@ -117,6 +121,7 @@ public class Music extends Cog {
         ctx.send("Paused!");
     }
 
+    @CommandHelp(desc = "Resumes the song if the song is paused")
     @Command(name = "resume")
     public void _commandResume(Context ctx) throws CommandException {
         if (!AudioUtils.userInSameChannel(ctx))
@@ -134,6 +139,7 @@ public class Music extends Cog {
         ctx.send("Resuming! The current song is: " + audioGuild.getCurrentSong().audioTrack.getInfo().title);
     }
 
+    @CommandHelp(desc = "Makes me leave the voice channel")
     @Command(name = "stop", aliases = {"leave", "disconnect"})
     public void _commandStop(Context ctx) throws CommandException {
         if (!AudioUtils.userInSameChannel(ctx))
@@ -143,6 +149,7 @@ public class Music extends Cog {
         ctx.send("Good bye!");
     }
 
+    @CommandHelp(desc = "Skip to the next song")
     @Command(name = "skip", aliases = {"s"})
     public void _commandSkip(Context ctx) throws CommandException {
         if (!AudioUtils.userInSameChannel(ctx))
@@ -160,6 +167,7 @@ public class Music extends Cog {
         ctx.send("Skipping!");
     }
 
+    @CommandHelp(desc = "Skip to a song in the queue", arguments = {"Queue ID"})
     @Command(name = "skipto")
     public void _commandSkipTo(Context ctx) throws CommandException, AudioException {
         if (!AudioUtils.userInSameChannel(ctx))
@@ -184,6 +192,7 @@ public class Music extends Cog {
         ctx.send("Skipping to song: " + audioGuild.getCurrentSong().audioTrack.getInfo().title);
     }
 
+    @CommandHelp(desc = "Clears the queue")
     @Command(name = "clear")
     public void _commandClear(Context ctx) throws CommandException {
         if (!AudioUtils.userInSameChannel(ctx))
@@ -198,6 +207,7 @@ public class Music extends Cog {
         ctx.send("Queue cleared!");
     }
 
+    @CommandHelp(desc = "Displays the current volume, or changes it.", arguments = {"Volume to change to [0-100]"})
     @Command(name = "volume", aliases = {"vol", "v"})
     public void _commandVolume(Context ctx) throws CommandException, AudioException {
         // First make sure the bot is in a voice call
@@ -226,6 +236,7 @@ public class Music extends Cog {
         ctx.send("\uD83C\uDFA7 The volume has been set to " + volume + "%");
     }
 
+    @CommandHelp(desc = "Shows information about the currently playing song")
     @Command(name = "nowplaying", aliases = {"np"})
     public void _commandNowPlaying(Context ctx) throws CommandException {
         // First make sure the bot is connected
@@ -257,6 +268,7 @@ public class Music extends Cog {
         ctx.send(embedBuilder.build());
     }
 
+    @CommandHelp(desc = "Enable/Disable song looping")
     @Command(name = "loop")
     public void _commandLoop(Context ctx) throws CommandException {
         if (!AudioUtils.userInSameChannel(ctx))
@@ -273,6 +285,7 @@ public class Music extends Cog {
             ctx.send("❌ No longer looping!");
     }
 
+    @CommandHelp(desc = "Shuffle the current queue")
     @Command(name = "shuffle")
     public void _commandShuffle(Context ctx) throws CommandException {
         if (!AudioUtils.userInSameChannel(ctx))
@@ -289,6 +302,7 @@ public class Music extends Cog {
             ctx.send("❌ No longer Shuffling!");
     }
 
+    @CommandHelp(desc = "Skip to a certain point of the song", arguments = {"Timestamp"})
     @Command(name = "seek")
     public void _commandSeek(Context ctx) throws CommandException {
         if (!AudioUtils.userInSameChannel(ctx))
@@ -340,6 +354,7 @@ public class Music extends Cog {
         ctx.send("Seeking to: " + AudioUtils.durationToString(audioGuild.getCurrentSong().audioTrack.getPosition()));
     }
 
+    @CommandHelp(desc = "Restarts the currently playing song")
     @Command(name = "restart")
     public void _commandRestart(Context ctx) throws CommandException {
         // TODO: Moderation override
@@ -356,6 +371,7 @@ public class Music extends Cog {
         ctx.send("Restarting song: " + audioGuild.getCurrentSong().audioTrack.getInfo().title);
     }
 
+    @CommandHelp(desc = "Displays the servers queue")
     @Command(name = "queue", aliases = {"q"})
     public void _commandQueue(Context ctx) throws YuiException {
         // Check if the bot is connected
@@ -406,6 +422,7 @@ public class Music extends Cog {
         paginator.run();
     }
 
+    @CommandHelp(name = "Remove Duplicates", desc = "Removes duplicate songs from the queue")
     @Command(name = "removeduplicates")
     public void _commandRemoveDuplicates(Context ctx) throws CommandException {
         if (!AudioUtils.userInSameChannel(ctx))
@@ -417,6 +434,7 @@ public class Music extends Cog {
         ctx.send("Removed `" + amountRemoved + "` duplicate songs from the queue!");
     }
 
+    @CommandHelp(name = "Remove Inactive", desc = "Removes songs from the queue, requested by members not in call")
     @Command(name = "removeinactive")
     public void _commandRemoveInactive(Context ctx) throws CommandException, AudioException {
         if (!AudioUtils.userInSameChannel(ctx))
