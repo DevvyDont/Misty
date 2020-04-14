@@ -16,6 +16,8 @@ import sh.niall.misty.utils.ui.Menu;
 import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.cogs.commands.annotations.Group;
 import sh.niall.yui.cogs.commands.annotations.GroupCommand;
+import sh.niall.yui.cogs.commands.checks.annotations.Check;
+import sh.niall.yui.cogs.commands.checks.checks.IsGuildMessage;
 import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.cogs.commands.help.annotations.CommandHelp;
 import sh.niall.yui.exceptions.CommandException;
@@ -35,6 +37,7 @@ public class Tags extends MistyCog {
         this.cogDescription = "All of your tagging needs!";
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Display a tag", arguments = {"Tag Name"})
     @Group(name = "tag", aliases = {"t", "tags"})
     public void _commandTag(Context ctx) throws CommandException {

@@ -19,6 +19,8 @@ import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.yui.cogs.cog.Cog;
 import sh.niall.yui.cogs.commands.annotations.Command;
+import sh.niall.yui.cogs.commands.checks.annotations.Check;
+import sh.niall.yui.cogs.commands.checks.checks.IsGuildMessage;
 import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.cogs.commands.help.annotations.CommandHelp;
 import sh.niall.yui.exceptions.CommandException;
@@ -40,6 +42,7 @@ public class Music extends Cog {
     /**
      * Moves the bot to the users voice channel
      */
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Make me join the voice channel")
     @Command(name = "summon", aliases = {"join"})
     public void _commandSummon(Context ctx) throws CommandException, InterruptedException {
@@ -66,6 +69,7 @@ public class Music extends Cog {
         ctx.send("Connected to: " + ctx.getAuthor().getVoiceState().getChannel().getName());
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Plays a song", arguments = {"Song URL"})
     @Command(name = "play", aliases = {"p"})
     public void _commandPlay(Context ctx) throws CommandException, InterruptedException, AudioException, MistyException {
@@ -103,6 +107,7 @@ public class Music extends Cog {
             ctx.send("Added `" + trackList.size() + "` songs to the queue!");
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Pauses the currently playing song")
     @Command(name = "pause")
     public void _commandPause(Context ctx) throws CommandException {
@@ -121,6 +126,7 @@ public class Music extends Cog {
         ctx.send("Paused!");
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Resumes the song if the song is paused")
     @Command(name = "resume")
     public void _commandResume(Context ctx) throws CommandException {
@@ -139,6 +145,7 @@ public class Music extends Cog {
         ctx.send("Resuming! The current song is: " + audioGuild.getCurrentSong().audioTrack.getInfo().title);
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Makes me leave the voice channel")
     @Command(name = "stop", aliases = {"leave", "disconnect"})
     public void _commandStop(Context ctx) throws CommandException {
@@ -149,6 +156,7 @@ public class Music extends Cog {
         ctx.send("Good bye!");
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Skip to the next song")
     @Command(name = "skip", aliases = {"s"})
     public void _commandSkip(Context ctx) throws CommandException {
@@ -167,6 +175,7 @@ public class Music extends Cog {
         ctx.send("Skipping!");
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Skip to a song in the queue", arguments = {"Queue ID"})
     @Command(name = "skipto")
     public void _commandSkipTo(Context ctx) throws CommandException, AudioException {
@@ -192,6 +201,7 @@ public class Music extends Cog {
         ctx.send("Skipping to song: " + audioGuild.getCurrentSong().audioTrack.getInfo().title);
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Clears the queue")
     @Command(name = "clear")
     public void _commandClear(Context ctx) throws CommandException {
@@ -207,6 +217,7 @@ public class Music extends Cog {
         ctx.send("Queue cleared!");
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Displays the current volume, or changes it.", arguments = {"Volume to change to [0-100]"})
     @Command(name = "volume", aliases = {"vol", "v"})
     public void _commandVolume(Context ctx) throws CommandException, AudioException {
@@ -236,6 +247,7 @@ public class Music extends Cog {
         ctx.send("\uD83C\uDFA7 The volume has been set to " + volume + "%");
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Shows information about the currently playing song")
     @Command(name = "nowplaying", aliases = {"np"})
     public void _commandNowPlaying(Context ctx) throws CommandException {
@@ -268,6 +280,7 @@ public class Music extends Cog {
         ctx.send(embedBuilder.build());
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Enable/Disable song looping")
     @Command(name = "loop")
     public void _commandLoop(Context ctx) throws CommandException {
@@ -285,6 +298,7 @@ public class Music extends Cog {
             ctx.send("❌ No longer looping!");
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Shuffle the current queue")
     @Command(name = "shuffle")
     public void _commandShuffle(Context ctx) throws CommandException {
@@ -302,6 +316,7 @@ public class Music extends Cog {
             ctx.send("❌ No longer Shuffling!");
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Skip to a certain point of the song", arguments = {"Timestamp"})
     @Command(name = "seek")
     public void _commandSeek(Context ctx) throws CommandException {
@@ -354,6 +369,7 @@ public class Music extends Cog {
         ctx.send("Seeking to: " + AudioUtils.durationToString(audioGuild.getCurrentSong().audioTrack.getPosition()));
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Restarts the currently playing song")
     @Command(name = "restart")
     public void _commandRestart(Context ctx) throws CommandException {
@@ -371,6 +387,7 @@ public class Music extends Cog {
         ctx.send("Restarting song: " + audioGuild.getCurrentSong().audioTrack.getInfo().title);
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(desc = "Displays the servers queue")
     @Command(name = "queue", aliases = {"q"})
     public void _commandQueue(Context ctx) throws YuiException {
@@ -422,6 +439,7 @@ public class Music extends Cog {
         paginator.run();
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(name = "Remove Duplicates", desc = "Removes duplicate songs from the queue")
     @Command(name = "removeduplicates")
     public void _commandRemoveDuplicates(Context ctx) throws CommandException {
@@ -434,6 +452,7 @@ public class Music extends Cog {
         ctx.send("Removed `" + amountRemoved + "` duplicate songs from the queue!");
     }
 
+    @Check(check = IsGuildMessage.class)
     @CommandHelp(name = "Remove Inactive", desc = "Removes songs from the queue, requested by members not in call")
     @Command(name = "removeinactive")
     public void _commandRemoveInactive(Context ctx) throws CommandException, AudioException {
