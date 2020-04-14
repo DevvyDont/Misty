@@ -31,9 +31,9 @@ public class Misty {
         database = new Database();
 
         // Generate JDA Builder
-        JDABuilder builder = new JDABuilder(config.getDiscordToken());
+        JDABuilder builder = JDABuilder.createDefault(config.getDiscordToken());
         builder.setAudioSendFactory(new NativeAudioSendFactory());
-        builder.setActivity(Activity.watching("Anime - ?help"));
+        builder.setActivity(Activity.watching("for messages - ?help"));
 
         // Setup Yui
         PrefixManager prefixManager = new PrefixManager(config.getDiscordPrefixes(), config.getBackupPrefix());
