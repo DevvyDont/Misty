@@ -5,10 +5,9 @@ import com.linkedin.urls.detection.UrlDetector;
 import com.linkedin.urls.detection.UrlDetectorOptions;
 import sh.niall.misty.utils.playlists.containers.PlaylistLookupContainer;
 import sh.niall.misty.utils.playlists.containers.PlaylistUrlsContainer;
-import sh.niall.yui.commands.Context;
+import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.exceptions.CommandException;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -73,7 +72,7 @@ public class PlaylistUtils {
      * @return true if they can't be found, false if they can
      */
     public static boolean targetDoesntExist(Context ctx, long id) {
-        return (ctx.getGuild().getMemberById(id) == null && ctx.getBot().getUserById(id) == null);
+        return (ctx.getGuild().getMemberById(id) == null && ctx.getJda().getUserById(id) == null);
     }
 
     /**
@@ -85,7 +84,7 @@ public class PlaylistUtils {
      */
     public static PlaylistUrlsContainer getPlaylistAndURLs(Context ctx) throws CommandException {
         // First some validation, we need at least two arguments (name and URL)
-        List<String> args = new ArrayList<>(ctx.getArgsStripped()); // Creating new Array so we don't modify the original
+        List<String> args = ctx.getArguments();
         if (args.size() < 2)
             throw new CommandException("Please provide a playlist name and url, see help for more information.");
 
@@ -123,7 +122,7 @@ public class PlaylistUtils {
         // Set default values
         long targetId = ctx.getAuthor().getIdLong();
         String playlistName = "";
-        List<String> args = new ArrayList<>(ctx.getArgsStripped());
+        List<String> args = ctx.getArguments();
 
         // First work out if we have a possible target
         if (!args.isEmpty()) {

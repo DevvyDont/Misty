@@ -14,7 +14,6 @@ import net.dv8tion.jda.api.entities.MessageChannel;
 import org.bson.Document;
 import sh.niall.misty.Misty;
 import sh.niall.misty.errors.AudioException;
-import sh.niall.misty.errors.ErrorHandler;
 import sh.niall.misty.utils.audio.helpers.SendHandler;
 import sh.niall.misty.utils.audio.helpers.TrackRequest;
 import sh.niall.yui.Yui;
@@ -298,9 +297,7 @@ public class AudioGuild extends AudioEventAdapter {
 
     @Override
     public void onTrackException(AudioPlayer player, AudioTrack track, FriendlyException exception) {
-        MessageChannel channel = yui.getJda().getTextChannelById(lastTextChannel);
-        Exception yuiException = new AudioException("There was an error playing music, please try again later. Reason: " + exception.getMessage());
-        ((ErrorHandler) yui.getErrorHandler()).postError(channel, yuiException);
+        yui.reportError(null, exception);
     }
 
     @Override

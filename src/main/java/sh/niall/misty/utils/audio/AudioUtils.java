@@ -13,7 +13,7 @@ import net.dv8tion.jda.api.entities.VoiceChannel;
 import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
 import sh.niall.misty.utils.audio.helpers.TrackWaiter;
-import sh.niall.yui.commands.Context;
+import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.exceptions.CommandException;
 
 import java.util.Collections;
@@ -67,7 +67,7 @@ public class AudioUtils {
 
         // Check to see if the bot is connected
         if (!ctx.getGuild().getAudioManager().isConnected()) {
-            AudioUtils.hasPermissions(ctx.getMe(), ctx.getAuthor().getVoiceState().getChannel());
+            AudioUtils.hasPermissions(ctx.getSelf(), ctx.getAuthor().getVoiceState().getChannel());
             audioGuildManager.joinChannel(ctx.getGuild(), ctx.getAuthor().getVoiceState().getChannel());
             audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong()); // Calling this to generate an AudioGuild
         }

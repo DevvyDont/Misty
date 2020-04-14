@@ -30,11 +30,11 @@ import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.Menu;
 import sh.niall.misty.utils.ui.paginator.Paginator;
-import sh.niall.yui.commands.Context;
-import sh.niall.yui.commands.interfaces.Group;
-import sh.niall.yui.commands.interfaces.GroupCommand;
+import sh.niall.yui.cogs.commands.annotations.Group;
+import sh.niall.yui.cogs.commands.annotations.GroupCommand;
+import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.exceptions.CommandException;
-import sh.niall.yui.exceptions.WaiterException;
+import sh.niall.yui.exceptions.YuiException;
 
 import java.awt.*;
 import java.io.IOException;
@@ -67,7 +67,7 @@ public class Playlists extends MistyCog {
 
     @GroupCommand(group = "playlist", name = "create", aliases = {"c"})
     public void _commandCreate(Context ctx) throws CommandException {
-        if (ctx.getArgsStripped().isEmpty())
+        if (ctx.getArguments().isEmpty())
             throw new CommandException("Please provide a playlist name.");
 
         // Get all of the users playlists, ensure they have less than 10
@@ -75,7 +75,7 @@ public class Playlists extends MistyCog {
             throw new CommandException("You can only have a total of " + maxPlaylists + " playlists!");
 
         // Validate the name
-        String friendlyName = String.join(" ", ctx.getArgsStripped());
+        String friendlyName = String.join(" ", ctx.getArguments());
         PlaylistUtils.validatePlaylistName(friendlyName);
 
         // Make the playlist
@@ -86,9 +86,9 @@ public class Playlists extends MistyCog {
     }
 
     @GroupCommand(group = "playlist", name = "delete", aliases = {"d"})
-    public void _commandDelete(Context ctx) throws CommandException, WaiterException {
+    public void _commandDelete(Context ctx) throws YuiException {
         // Get the playlist - No permission check as we're searching the users playlists
-        String friendlyName = String.join(" ", ctx.getArgsStripped());
+        String friendlyName = String.join(" ", ctx.getArguments());
         Playlist playlist = new Playlist(this.db, ctx.getAuthor().getIdLong(), ctx.getAuthor().getIdLong(), Playlist.generateSearchName(friendlyName));
 
         // Convert editors to real names
@@ -101,7 +101,7 @@ public class Playlists extends MistyCog {
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Playlist delete confirm!");
         embedBuilder.setDescription("Are you sure you want to delete the playlist " + friendlyName);
-        embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
+        embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getAuthorUser().getEffectiveAvatarUrl());
         embedBuilder.addField("Songs:", String.valueOf(playlist.songList.size()), true);
         if (stringBuilder.length() != 0)
             embedBuilder.addField("Editors:", stringBuilder.toString(), true);
@@ -117,9 +117,9 @@ public class Playlists extends MistyCog {
     }
 
     @GroupCommand(group = "playlist", name = "edit", aliases = {"e"})
-    public void _commandEdit(Context ctx) throws CommandException, WaiterException {
+    public void _commandEdit(Context ctx) throws YuiException {
         // Get the playlist - No permission check as we're searching the users playlists
-        String friendlyName = String.join(" ", ctx.getArgsStripped());
+        String friendlyName = String.join(" ", ctx.getArguments());
         Playlist playlist = new Playlist(this.db, ctx.getAuthor().getIdLong(), ctx.getAuthor().getIdLong(), Playlist.generateSearchName(friendlyName));
 
         // Setup the update information
@@ -127,7 +127,7 @@ public class Playlists extends MistyCog {
                 .setTitle("Edit Conformation")
                 .setDescription("Are you sure you want to make these changes to the playlist " + friendlyName + " ?")
                 .setColor(Color.YELLOW)
-                .setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
+                .setAuthor(UserSettings.getName(ctx), null, ctx.getAuthorUser().getEffectiveAvatarUrl());
 
         // Present the menu and ask what they want.
         int menuOption = Menu.showMenu(
@@ -256,7 +256,7 @@ public class Playlists extends MistyCog {
                         if (PlaylistUtils.targetDoesntExist(ctx, newTarget))
                             throw new CommandException("I don't know who that is! Please make sure the editor you're trying to add is in this server.");
 
-                        if (ctx.getBot().getUserById(newTarget).isBot())
+                        if (ctx.getJda().getUserById(newTarget).isBot())
                             throw new CommandException("You can't make a bot an editor!");
 
                         playlist.editors.add(newTarget);
@@ -286,7 +286,7 @@ public class Playlists extends MistyCog {
                         if (PlaylistUtils.targetDoesntExist(ctx, newOwnerLong))
                             throw new CommandException("I don't know who that is! Please make sure the new owner is in this server.");
 
-                        if (ctx.getBot().getUserById(newOwnerLong).isBot())
+                        if (ctx.getJda().getUserById(newOwnerLong).isBot())
                             throw new CommandException("You can't make a bot an owner of a playlist!");
 
                         if (db.count(Filters.eq("author", newOwnerLong)) >= maxPlaylists)
@@ -312,7 +312,7 @@ public class Playlists extends MistyCog {
                     .setTitle("Playlist Transfer")
                     .setDescription("Would you like to take ownership of the `" + playlist.friendlyName + "` playlist?")
                     .setColor(Color.YELLOW)
-                    .setAuthor(UserSettings.getName(ctx, playlist.author), null, ctx.getBot().getUserById(playlist.author).getEffectiveAvatarUrl());
+                    .setAuthor(UserSettings.getName(ctx, playlist.author), null, ctx.getJda().getUserById(playlist.author).getEffectiveAvatarUrl());
 
             boolean targetDecision;
             try {
@@ -335,7 +335,7 @@ public class Playlists extends MistyCog {
     }
 
     @GroupCommand(group = "playlist", name = "add", aliases = {"a"})
-    public void _commandAdd(Context ctx) throws CommandException, AudioException, MistyException, IOException, WaiterException {
+    public void _commandAdd(Context ctx) throws YuiException, IOException {
         // First translate our arguments into data
         PlaylistUrlsContainer results = PlaylistUtils.getPlaylistAndURLs(ctx);
         Playlist playlist = new Playlist(db, results.targetId, ctx.getAuthor().getIdLong(), Playlist.generateSearchName(results.playlistName));
@@ -409,7 +409,7 @@ public class Playlists extends MistyCog {
     }
 
     @GroupCommand(group = "playlist", name = "remove", aliases = {"r"})
-    public void _commandRemove(Context ctx) throws CommandException, WaiterException {
+    public void _commandRemove(Context ctx) throws YuiException {
         // First translate our arguments into data
         PlaylistUrlsContainer results = PlaylistUtils.getPlaylistAndURLs(ctx);
         Playlist playlist = new Playlist(db, results.targetId, ctx.getAuthor().getIdLong(), Playlist.generateSearchName(results.playlistName));
@@ -438,7 +438,7 @@ public class Playlists extends MistyCog {
     }
 
     @GroupCommand(group = "playlist", name = "list", aliases = {"l"})
-    public void _commandList(Context ctx) throws CommandException, AudioException, MistyException, IOException, WaiterException {
+    public void _commandList(Context ctx) throws YuiException, IOException {
         PlaylistLookupContainer result = PlaylistUtils.getTargetAndName(ctx);
         List<EmbedBuilder> embedList = new ArrayList<>();
 
@@ -488,7 +488,7 @@ public class Playlists extends MistyCog {
 
             // Create the embeds
             Color embedColor = Helper.randomColor();
-            User user = ctx.getBot().getUserById(playlist.author);
+            User user = ctx.getJda().getUserById(playlist.author);
             for (List<String> urlList : ListUtils.partition(new ArrayList<>(playlist.songList.keySet()), 6)) {
                 EmbedBuilder embedBuilder = new EmbedBuilder();
                 embedBuilder.setTitle(String.format("**%s**", playlist.friendlyName));

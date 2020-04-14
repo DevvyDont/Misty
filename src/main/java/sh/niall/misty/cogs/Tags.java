@@ -14,11 +14,11 @@ import sh.niall.misty.utils.tags.Tag;
 import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.Menu;
 import sh.niall.misty.utils.ui.paginator.Paginator;
-import sh.niall.yui.commands.Context;
-import sh.niall.yui.commands.interfaces.Group;
-import sh.niall.yui.commands.interfaces.GroupCommand;
+import sh.niall.yui.cogs.commands.annotations.Group;
+import sh.niall.yui.cogs.commands.annotations.GroupCommand;
+import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.exceptions.CommandException;
-import sh.niall.yui.exceptions.WaiterException;
+import sh.niall.yui.exceptions.YuiException;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -37,11 +37,11 @@ public class Tags extends MistyCog {
         if (ctx.didSubCommandRun())
             return;
 
-        if (ctx.getArgsStripped().isEmpty())
+        if (ctx.getArguments().isEmpty())
             throw new CommandException("Please provide a tag to lookup");
 
         // Find the tag
-        String tagName = String.join(" ", ctx.getArgsStripped());
+        String tagName = String.join(" ", ctx.getArguments());
         Tag tag = new Tag(db, ctx.getGuild().getIdLong(), Tag.generateSearchName(tagName));
 
         // Increase the use counter
@@ -53,9 +53,9 @@ public class Tags extends MistyCog {
     }
 
     @GroupCommand(group = "tag", name = "create", aliases = {"c", "add"})
-    public void _commandCreate(Context ctx) throws CommandException, WaiterException {
+    public void _commandCreate(Context ctx) throws YuiException {
         // Check we were given an argument
-        if (ctx.getArgsStripped().isEmpty())
+        if (ctx.getArguments().isEmpty())
             throw new CommandException("Please provide the name of the tag you want to create!");
 
         // Get all of the members tags, ensure they have less than 40
@@ -63,7 +63,7 @@ public class Tags extends MistyCog {
             throw new CommandException(String.format("You can only have a total of %s tags per guild!", maxTagsPerMember));
 
         // First get the name
-        String friendlyName = String.join(" ", ctx.getArgsStripped());
+        String friendlyName = String.join(" ", ctx.getArguments());
         String searchName = Tag.generateSearchName(friendlyName);
 
         // Validate the search name
@@ -88,12 +88,12 @@ public class Tags extends MistyCog {
     }
 
     @GroupCommand(group = "tag", name = "delete", aliases = {"del", "d", "remove"})
-    public void _commandDelete(Context ctx) throws CommandException, WaiterException {
-        if (ctx.getArgsStripped().isEmpty())
+    public void _commandDelete(Context ctx) throws YuiException {
+        if (ctx.getArguments().isEmpty())
             throw new CommandException("Please provide a tag to delete!");
 
         // First get the tag
-        String friendlyName = String.join(" ", ctx.getArgsStripped());
+        String friendlyName = String.join(" ", ctx.getArguments());
         Tag tag = new Tag(db, ctx.getGuild().getIdLong(), Tag.generateSearchName(friendlyName));
 
         // Make sure the invoker is the owner
@@ -105,7 +105,7 @@ public class Tags extends MistyCog {
         embedBuilder.setAuthor("Tag Delete");
         embedBuilder.setDescription(String.format("Are you sure you want to delete the %s tag?", friendlyName));
         embedBuilder.setColor(Color.RED);
-        embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
+        embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getAuthorUser().getEffectiveAvatarUrl());
         embedBuilder.addField("Content: ", tag.body, false);
         embedBuilder.addField("Created: ", new UserSettings(ctx).getLongDateTime(tag.timestamp), true);
         embedBuilder.addField("Uses: ", String.valueOf(tag.uses), true);
@@ -118,13 +118,13 @@ public class Tags extends MistyCog {
     }
 
     @GroupCommand(group = "tag", name = "edit", aliases = {"e"})
-    public void _commandEdit(Context ctx) throws CommandException, WaiterException {
+    public void _commandEdit(Context ctx) throws YuiException {
         // Check we were given an argument
-        if (ctx.getArgsStripped().isEmpty())
+        if (ctx.getArguments().isEmpty())
             throw new CommandException("Please provide the name of the tag you want to edit!");
 
         // Get the tag
-        String friendlyName = String.join(" ", ctx.getArgsStripped());
+        String friendlyName = String.join(" ", ctx.getArguments());
         Tag tag = new Tag(db, ctx.getGuild().getIdLong(), Tag.generateSearchName(friendlyName));
 
         // Make sure the invoker is the owner
@@ -159,7 +159,7 @@ public class Tags extends MistyCog {
                 .setTitle("Edit Conformation")
                 .setDescription(String.format("Are you sure you want to make these changes to the tag %s?", tag.friendlyName))
                 .setColor(Color.YELLOW)
-                .setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
+                .setAuthor(UserSettings.getName(ctx), null, ctx.getAuthorUser().getEffectiveAvatarUrl());
 
 
         // Using Atomic to keep track of how many iterations
@@ -205,7 +205,7 @@ public class Tags extends MistyCog {
                         if (ctx.getGuild().getMemberById(newOwnerLong) == null)
                             throw new CommandException("I don't know who that is! Please make sure the new owner is in this server.");
 
-                        if (ctx.getBot().getUserById(newOwnerLong).isBot())
+                        if (ctx.getJda().getUserById(newOwnerLong).isBot())
                             throw new CommandException("You can't transfer a tag to a bot!");
 
                         if (this.db.count(Filters.and(Filters.eq("author", ctx.getAuthor().getIdLong()), Filters.eq("guild", ctx.getGuild().getIdLong()))) >= maxTagsPerMember)
@@ -227,7 +227,7 @@ public class Tags extends MistyCog {
                     .setTitle("Tag Transfer")
                     .setDescription(String.format("Would you like to take ownership of the `%s` tag?", tag.friendlyName))
                     .setColor(Color.YELLOW)
-                    .setAuthor(UserSettings.getName(ctx, tag.author), null, ctx.getBot().getUserById(tag.author).getEffectiveAvatarUrl());
+                    .setAuthor(UserSettings.getName(ctx, tag.author), null, ctx.getJda().getUserById(tag.author).getEffectiveAvatarUrl());
 
             boolean targetDecision;
             try {
@@ -252,11 +252,11 @@ public class Tags extends MistyCog {
     @GroupCommand(group = "tag", name = "info", aliases = {"i"})
     public void _commandInfo(Context ctx) throws CommandException {
         // Check we were given an argument
-        if (ctx.getArgsStripped().isEmpty())
+        if (ctx.getArguments().isEmpty())
             throw new CommandException("Please provide the name of the tag you want to lookup!");
 
         // Find the tag
-        String tagName = String.join(" ", ctx.getArgsStripped());
+        String tagName = String.join(" ", ctx.getArguments());
         Tag tag = new Tag(db, ctx.getGuild().getIdLong(), Tag.generateSearchName(tagName));
         UserSettings userSettings = new UserSettings(ctx.getAuthor().getIdLong());
 
@@ -273,7 +273,7 @@ public class Tags extends MistyCog {
                 (ctx.getGuild().getMemberById(tag.author) == null) ? "Author is currently not in this discord, tag is claimable!" : ""
         ));
         embedBuilder.setFooter("Using your specified Timezone: " + userSettings.timezone.getId());
-        User user = ctx.getBot().getUserById(tag.author);
+        User user = ctx.getJda().getUserById(tag.author);
         if (user != null)
             embedBuilder.setAuthor(UserSettings.getName(ctx, tag.author), null, user.getEffectiveAvatarUrl());
 
@@ -282,11 +282,11 @@ public class Tags extends MistyCog {
     }
 
     @GroupCommand(group = "tag", name = "list", aliases = {"l"})
-    public void _commandList(Context ctx) throws CommandException, WaiterException {
+    public void _commandList(Context ctx) throws YuiException {
         // If they provided an argument, see if it's a possible target
         long targetId = ctx.getAuthor().getIdLong();
-        if (!ctx.getArgsStripped().isEmpty()) {
-            String possibleTarget = ctx.getArgsStripped().get(0).replace("<@!", "").replace("<@", "").replace(">", "");
+        if (!ctx.getArguments().isEmpty()) {
+            String possibleTarget = ctx.getArguments().get(0).replace("<@!", "").replace("<@", "").replace(">", "");
             int length = possibleTarget.length();
             if (15 <= length && length <= 21 && possibleTarget.matches("\\d+")) {
                 targetId = Long.parseLong(possibleTarget);
@@ -304,7 +304,7 @@ public class Tags extends MistyCog {
         // Getting information for the pages
         List<EmbedBuilder> embedBuilderList = new ArrayList<>();
         EmbedBuilder embedBuilderMaster = new EmbedBuilder();
-        User targetUser = ctx.getBot().getUserById(targetId);
+        User targetUser = ctx.getJda().getUserById(targetId);
         String targetName = UserSettings.getName(ctx, targetId);
         embedBuilderMaster.setTitle(String.format("%s's tags!", targetName));
         embedBuilderMaster.setAuthor(targetName, null, (targetUser != null) ? targetUser.getEffectiveAvatarUrl() : null);
@@ -334,11 +334,11 @@ public class Tags extends MistyCog {
     @GroupCommand(group = "tag", name = "claim")
     public void _commandClaim(Context ctx) throws CommandException {
         // Check we were given an argument
-        if (ctx.getArgsStripped().isEmpty())
+        if (ctx.getArguments().isEmpty())
             throw new CommandException("Please provide the name of the tag you want to lookup!");
 
         // Find the tag
-        String tagName = String.join(" ", ctx.getArgsStripped());
+        String tagName = String.join(" ", ctx.getArguments());
         Tag tag = new Tag(db, ctx.getGuild().getIdLong(), Tag.generateSearchName(tagName));
 
         // Check if the author is still in the guild

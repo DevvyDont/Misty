@@ -4,7 +4,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import org.bson.Document;
 import sh.niall.misty.cogs.Reminders;
 import sh.niall.misty.utils.ui.paginator.Paginator;
-import sh.niall.yui.commands.Context;
+import sh.niall.yui.cogs.commands.context.Context;
 
 import java.util.ArrayList;
 import java.util.Map;

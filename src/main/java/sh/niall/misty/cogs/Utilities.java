@@ -6,10 +6,10 @@ import sh.niall.misty.utils.misty.MistyCog;
 import sh.niall.misty.utils.settings.Languages;
 import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.ui.Menu;
-import sh.niall.yui.commands.Context;
-import sh.niall.yui.commands.interfaces.Command;
+import sh.niall.yui.cogs.commands.annotations.Command;
+import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.exceptions.CommandException;
-import sh.niall.yui.exceptions.WaiterException;
+import sh.niall.yui.exceptions.YuiException;
 
 import java.awt.*;
 import java.time.ZoneId;
@@ -28,16 +28,16 @@ public class Utilities extends MistyCog {
         User targetUser = null;
 
         // If we're given an ID, check to see if it's valid
-        if (!ctx.getArgsStripped().isEmpty()) {
-            String target = ctx.getArgsStripped().get(0).replace("<@!", "").replace(">", "");
-            targetUser = ctx.getBot().getUserById(target);
+        if (!ctx.getArguments().isEmpty()) {
+            String target = ctx.getArguments().get(0).replace("<@!", "").replace(">", "");
+            targetUser = ctx.getJda().getUserById(target);
             if (targetUser == null)
-                throw new CommandException("I can't find a user with the ID " + ctx.getArgsStripped().get(0));
+                throw new CommandException("I can't find a user with the ID " + ctx.getArguments().get(0));
         }
 
         // Make the target the invoker
         if (targetUser == null)
-            targetUser = ctx.getUser();
+            targetUser = ctx.getAuthorUser();
 
         // Send the output
         ctx.send(String.format("Here is %s avatar:\n%s", targetUser.getName(), targetUser.getEffectiveAvatarUrl()));
@@ -66,7 +66,7 @@ public class Utilities extends MistyCog {
     }
 
     @Command(name = "settings")
-    public void _commandSettings(Context ctx) throws CommandException, WaiterException {
+    public void _commandSettings(Context ctx) throws YuiException {
         UserSettings userSettings = new UserSettings(ctx.getAuthor().getIdLong());
 
         int menuOption = Menu.showMenu(
@@ -82,7 +82,7 @@ public class Utilities extends MistyCog {
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("User Settings Change");
         embedBuilder.setDescription("Are you sure you want to change the following setting");
-        embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
+        embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getAuthorUser().getEffectiveAvatarUrl());
         embedBuilder.setColor(Color.YELLOW);
 
         if (menuOption == 1) {

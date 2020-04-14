@@ -11,12 +11,12 @@ import org.bson.Document;
 import sh.niall.misty.Misty;
 import sh.niall.misty.utils.misty.MistyCog;
 import sh.niall.misty.utils.settings.UserSettings;
-import sh.niall.yui.commands.Context;
-import sh.niall.yui.commands.interfaces.Group;
-import sh.niall.yui.commands.interfaces.GroupCommand;
+import sh.niall.yui.cogs.commands.annotations.Group;
+import sh.niall.yui.cogs.commands.annotations.GroupCommand;
+import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.exceptions.CogException;
 import sh.niall.yui.exceptions.CommandException;
-import sh.niall.yui.exceptions.WaiterException;
+import sh.niall.yui.exceptions.YuiException;
 
 import java.util.List;
 
@@ -32,8 +32,8 @@ public class Social extends MistyCog {
 
         // Work out the target
         long target = ctx.getAuthor().getIdLong();
-        if (!ctx.getArgsStripped().isEmpty()) {
-            String possibleTarget = ctx.getArgsStripped().get(0).replace("<@!", "").replace("<@", "").replace(">", "");
+        if (!ctx.getArguments().isEmpty()) {
+            String possibleTarget = ctx.getArguments().get(0).replace("<@!", "").replace("<@", "").replace(">", "");
             int length = possibleTarget.length();
             if (15 <= length && length <= 21 && possibleTarget.matches("\\d+"))
                 target = Long.parseLong(possibleTarget);
@@ -53,8 +53,8 @@ public class Social extends MistyCog {
     }
 
     @GroupCommand(group = "bio", name = "set")
-    public void _commandSet(Context ctx) throws CommandException, WaiterException {
-        if (ctx.getArgsStripped().isEmpty())
+    public void _commandSet(Context ctx) throws YuiException {
+        if (ctx.getArguments().isEmpty())
             throw new CommandException("Please provide a bio to set, or run the clear sub command to remove you current bio.");
 
         // Get their new bio
@@ -145,7 +145,7 @@ public class Social extends MistyCog {
     }
 
     @GroupCommand(group = "bio", name = "clear")
-    public void _commandClear(Context ctx) throws CommandException, WaiterException {
+    public void _commandClear(Context ctx) throws YuiException {
         // Check they have a bio
         Document document = db.find(Filters.eq("_id", ctx.getAuthor().getIdLong())).first();
         if (document == null)

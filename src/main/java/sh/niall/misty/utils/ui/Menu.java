@@ -1,9 +1,9 @@
 package sh.niall.misty.utils.ui;
 
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
-import sh.niall.yui.commands.Context;
+import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.exceptions.CommandException;
-import sh.niall.yui.exceptions.WaiterException;
+import sh.niall.yui.exceptions.YuiException;
 import sh.niall.yui.waiter.WaiterStorage;
 
 import java.util.concurrent.TimeUnit;
@@ -18,9 +18,8 @@ public class Menu {
      * @param options  The options the user can pick
      * @return The option the user picked
      * @throws CommandException Thrown if the user times out
-     * @throws WaiterException  Thrown if there was an issue waiting
      */
-    public static int showMenu(Context ctx, String question, String[] options) throws WaiterException, CommandException {
+    public static int showMenu(Context ctx, String question, String[] options) throws YuiException {
         return showMenu(ctx, question, options, 3);
     }
 
@@ -33,9 +32,8 @@ public class Menu {
      * @param maxAttempts How many attempts they're allowed
      * @return The option the user picked
      * @throws CommandException Thrown if the user times out
-     * @throws WaiterException  Thrown if there was an issue waiting
      */
-    public static int showMenu(Context ctx, String question, String[] options, int maxAttempts) throws CommandException, WaiterException {
+    public static int showMenu(Context ctx, String question, String[] options, int maxAttempts) throws YuiException {
         int attempts = 0;
 
         // Ensure it ends with a new line
@@ -63,7 +61,7 @@ public class Menu {
                         return (e.getChannel().getIdLong() == ctx.getChannel().getIdLong()) && (e.getAuthor().getIdLong() == ctx.getAuthor().getIdLong());
                     }, 15, TimeUnit.SECONDS
             );
-            ctx.getYui().getEventWaiter().waitForNewEvent(waiterStorage);
+            ctx.getYui().waitForNewEvent(waiterStorage);
             GuildMessageReceivedEvent messageEvent = (GuildMessageReceivedEvent) waiterStorage.getEvent();
 
             // Quit the menu if they don't respond in time

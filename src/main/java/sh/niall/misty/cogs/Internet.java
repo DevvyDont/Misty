@@ -9,14 +9,13 @@ import org.json.JSONObject;
 import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.paginator.Paginator;
-import sh.niall.yui.cogs.Cog;
-import sh.niall.yui.commands.Context;
-import sh.niall.yui.commands.interfaces.Command;
+import sh.niall.yui.cogs.cog.Cog;
+import sh.niall.yui.cogs.commands.annotations.Command;
+import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.exceptions.CommandException;
-import sh.niall.yui.exceptions.WaiterException;
+import sh.niall.yui.exceptions.YuiException;
 
 import java.io.IOException;
-import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -125,11 +124,11 @@ public class Internet extends Cog {
     }
 
     @Command(name = "urbandictionary", aliases = {"ud", "urban"})
-    public void _commandUrban(Context ctx) throws CommandException, IOException, WaiterException, ParseException {
-        if (ctx.getArgsStripped().isEmpty())
+    public void _commandUrban(Context ctx) throws YuiException, IOException {
+        if (ctx.getArguments().isEmpty())
             throw new CommandException("Please specify a word to search!");
 
-        String word = String.join("+", ctx.getArgsStripped());
+        String word = String.join("+", ctx.getArguments());
         String query = "http://api.urbandictionary.com/v0/define?term=" + word;
         Response response = client.newCall(new Request.Builder().url(query).build()).execute();
         if (response.code() != 200) {
@@ -145,7 +144,7 @@ public class Internet extends Cog {
             String date = jsonObject.getString("written_on").replace("T", " ").split("\\.")[0];
             embedBuilder.setTitle("Urban Dictionary");
             embedBuilder.setDescription("Word: " + word);
-            embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
+            embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getAuthorUser().getEffectiveAvatarUrl());
             embedBuilder.addField("Definition:", jsonObject.getString("definition"), false);
             embedBuilder.addField("Example:", jsonObject.getString("example"), false);
             embedBuilder.addField("Author:", jsonObject.getString("author"), true);
@@ -182,8 +181,8 @@ public class Internet extends Cog {
         // Get the target name
         // Work out the target
         long target = ctx.getAuthor().getIdLong();
-        if (!ctx.getArgsStripped().isEmpty()) {
-            String possibleTarget = ctx.getArgsStripped().get(0).replace("<@!", "").replace("<@", "").replace(">", "");
+        if (!ctx.getArguments().isEmpty()) {
+            String possibleTarget = ctx.getArguments().get(0).replace("<@!", "").replace("<@", "").replace(">", "");
             int length = possibleTarget.length();
             if (15 <= length && length <= 21 && possibleTarget.matches("\\d+"))
                 target = Long.parseLong(possibleTarget);
@@ -219,8 +218,8 @@ public class Internet extends Cog {
         // Get the target name
         // Work out the target
         long target = ctx.getAuthor().getIdLong();
-        if (!ctx.getArgsStripped().isEmpty()) {
-            String possibleTarget = ctx.getArgsStripped().get(0).replace("<@!", "").replace("<@", "").replace(">", "");
+        if (!ctx.getArguments().isEmpty()) {
+            String possibleTarget = ctx.getArguments().get(0).replace("<@!", "").replace("<@", "").replace(">", "");
             int length = possibleTarget.length();
             if (15 <= length && length <= 21 && possibleTarget.matches("\\d+"))
                 target = Long.parseLong(possibleTarget);

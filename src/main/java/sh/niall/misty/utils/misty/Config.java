@@ -7,6 +7,7 @@ public class Config {
     String discordErrorImage;
     String discordToken;
     List<String> discordPrefixes;
+    String backupPrefix;
 
     String mongoURL;
 
@@ -24,5 +25,9 @@ public class Config {
 
     public List<String> getDiscordPrefixes() {
         return discordPrefixes;
+    }
+
+    public String getBackupPrefix() {
+        return backupPrefix;
     }
 }

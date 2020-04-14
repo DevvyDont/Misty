@@ -16,11 +16,11 @@ import sh.niall.misty.utils.reminders.HumanDateConverter;
 import sh.niall.misty.utils.reminders.RemindersPaginator;
 import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.ui.Helper;
-import sh.niall.yui.commands.Context;
-import sh.niall.yui.commands.interfaces.Group;
-import sh.niall.yui.commands.interfaces.GroupCommand;
+import sh.niall.yui.cogs.commands.annotations.Group;
+import sh.niall.yui.cogs.commands.annotations.GroupCommand;
+import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.exceptions.CommandException;
-import sh.niall.yui.exceptions.WaiterException;
+import sh.niall.yui.exceptions.YuiException;
 import sh.niall.yui.tasks.interfaces.Loop;
 
 import java.awt.*;
@@ -36,7 +36,7 @@ public class Reminders extends MistyCog {
     private MongoCollection<Document> db = Misty.database.getCollection("reminders");
 
     @Group(name = "remind", aliases = {"reminders"})
-    public void _commandGroup(Context ctx) throws CommandException, WaiterException {
+    public void _commandGroup(Context ctx) throws YuiException {
         if (ctx.didSubCommandRun())
             return;
 
@@ -45,7 +45,7 @@ public class Reminders extends MistyCog {
 
         // Understand the request
         UserSettings userSettings = new UserSettings(ctx);
-        ZonedDateTime remindAt = new HumanDateConverter(userSettings, String.join(" ", ctx.getArgsStripped())).toZonedDateTime();
+        ZonedDateTime remindAt = new HumanDateConverter(userSettings, String.join(" ", ctx.getArguments())).toZonedDateTime();
         ZonedDateTime now = ZonedDateTime.now(userSettings.timezone);
         if (remindAt.toEpochSecond() < now.toEpochSecond())
             throw new CommandException("Please specify a date in the future, I can't change the past!");
@@ -79,7 +79,7 @@ public class Reminders extends MistyCog {
     }
 
     @GroupCommand(group = "remind", name = "list")
-    public void _commandList(Context ctx) throws CommandException, WaiterException {
+    public void _commandList(Context ctx) throws YuiException {
         Map<EmbedBuilder, Document> pages = new HashMap<>();
 
         // Get all the reminders
@@ -90,7 +90,7 @@ public class Reminders extends MistyCog {
             EmbedBuilder embedBuilder = new EmbedBuilder();
             embedBuilder.setTitle("Your reminders", document.getString("url"));
             embedBuilder.setDescription("Time is in UTC.");
-            embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
+            embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getAuthorUser().getEffectiveAvatarUrl());
             embedBuilder.addField("Date:", remindDT.format(DateTimeFormatter.ofPattern("EEE dd MMMM yyyy")), true);
             embedBuilder.addField("Time:", remindDT.format(DateTimeFormatter.ofPattern("hh:mm:ss a")), true);
             embedBuilder.addField("Duration:", durationToString(duration), false);
@@ -192,7 +192,7 @@ public class Reminders extends MistyCog {
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Are you sure you want to delete this reminder?", document.getString("url"));
         embedBuilder.setDescription("Time is in UTC.");
-        embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
+        embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getAuthorUser().getEffectiveAvatarUrl());
         embedBuilder.addField("Date:", remindDT.format(DateTimeFormatter.ofPattern("EEE dd MMMM yyyy")), true);
         embedBuilder.addField("Time:", remindDT.format(DateTimeFormatter.ofPattern("hh:mm:ss a")), true);
         embedBuilder.addField("Duration:", durationToString(Duration.between(LocalDateTime.now(), remindDT)), false);

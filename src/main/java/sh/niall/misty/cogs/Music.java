@@ -5,7 +5,6 @@ import com.linkedin.urls.detection.UrlDetector;
 import com.linkedin.urls.detection.UrlDetectorOptions;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -18,11 +17,11 @@ import sh.niall.misty.utils.audio.helpers.TrackRequest;
 import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.ui.Helper;
 import sh.niall.misty.utils.ui.paginator.Paginator;
-import sh.niall.yui.cogs.Cog;
-import sh.niall.yui.commands.Context;
-import sh.niall.yui.commands.interfaces.Command;
+import sh.niall.yui.cogs.cog.Cog;
+import sh.niall.yui.cogs.commands.annotations.Command;
+import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.exceptions.CommandException;
-import sh.niall.yui.exceptions.WaiterException;
+import sh.niall.yui.exceptions.YuiException;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -53,7 +52,7 @@ public class Music extends Cog {
         }
 
         // Now check if we have the needed perms in the voice channel
-        AudioUtils.hasPermissions(ctx.getMe(), ctx.getAuthor().getVoiceState().getChannel());
+        AudioUtils.hasPermissions(ctx.getSelf(), ctx.getAuthor().getVoiceState().getChannel());
 
         // Move to the voice channel
         audioGuildManager.joinChannel(ctx.getGuild(), ctx.getAuthor().getVoiceState().getChannel());
@@ -67,14 +66,14 @@ public class Music extends Cog {
 
     @Command(name = "play", aliases = {"p"})
     public void _commandPlay(Context ctx) throws CommandException, InterruptedException, AudioException, MistyException {
-        if (ctx.getArgsStripped().isEmpty())
+        if (ctx.getArguments().isEmpty())
             throw new CommandException("Please provide a URL for me to play! If you were looking to resume playback, use `resume` instead.");
 
         // Handle summon checks
         AudioUtils.runSummon(audioGuildManager, ctx);
 
         // Setup the Query
-        String messageArgs = String.join(" ", ctx.getArgsStripped());
+        String messageArgs = String.join(" ", ctx.getArguments());
         List<Url> urls = new UrlDetector(messageArgs, UrlDetectorOptions.Default).detect();
         String queryString = urls.isEmpty() ? "ytsearch:" + messageArgs : urls.get(0).getFullUrl();
         boolean usedSearch = urls.isEmpty();
@@ -176,7 +175,7 @@ public class Music extends Cog {
         int skipTo;
 
         try {
-            skipTo = Integer.parseInt(ctx.getArgsStripped().get(0));
+            skipTo = Integer.parseInt(ctx.getArguments().get(0));
         } catch (NumberFormatException e) {
             throw new CommandException("Please provide a valid song to skip to. Hint: Use `queue` to get the songs number");
         }
@@ -206,7 +205,7 @@ public class Music extends Cog {
             throw new CommandException("I don't have a volume level because I'm not in a voice call");
 
         AudioGuild audioGuild = audioGuildManager.getAudioGuild(ctx.getGuild().getIdLong());
-        if (ctx.getArgsStripped().isEmpty()) {
+        if (ctx.getArguments().isEmpty()) {
             // Display the volume
             ctx.send("\uD83C\uDFA7 The current volume is " + audioGuild.getVolume() + "%");
             return;
@@ -217,11 +216,11 @@ public class Music extends Cog {
             throw new CommandException("You can't change the volume because we're not in the same voice channel!");
 
         // Detect if the first argument is a int
-        if (!ctx.getArgsStripped().get(0).matches("-?(0|[1-9]\\d*)"))
+        if (!ctx.getArguments().get(0).matches("-?(0|[1-9]\\d*)"))
             throw new CommandException("Please specify a valid number between 0-100 to change the volume to.");
 
         // Change the volume
-        int volume = Integer.parseInt(ctx.getArgsStripped().get(0));
+        int volume = Integer.parseInt(ctx.getArguments().get(0));
         audioGuild.setVolume(volume);
         audioGuild.setLastTextChannel(ctx.getChannel().getIdLong());
         ctx.send("\uD83C\uDFA7 The volume has been set to " + volume + "%");
@@ -299,11 +298,11 @@ public class Music extends Cog {
         if (audioGuild.getCurrentSong() == null || audioGuild.isPaused())
             throw new CommandException("I'm currently not playing anything!");
 
-        if (ctx.getArgsStripped().isEmpty())
+        if (ctx.getArguments().isEmpty())
             throw new CommandException("Please provide a time to seek to.");
 
         // First check we were given just colons and numbers
-        String time = ctx.getArgsStripped().get(0);
+        String time = ctx.getArguments().get(0);
         if (!time.matches("[0-9:]+"))
             throw new CommandException("Please provide a valid time to seek to. See `help seek` for more information");
 
@@ -358,7 +357,7 @@ public class Music extends Cog {
     }
 
     @Command(name = "queue", aliases = {"q"})
-    public void _commandQueue(Context ctx) throws CommandException, WaiterException {
+    public void _commandQueue(Context ctx) throws YuiException {
         // Check if the bot is connected
         if (!ctx.getGuild().getAudioManager().isConnected())
             throw new CommandException("There is no queue because I'm not in a voice channel");

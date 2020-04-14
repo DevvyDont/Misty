@@ -6,7 +6,7 @@ import sh.niall.misty.cogs.Reminders;
 import sh.niall.misty.utils.settings.UserSettings;
 import sh.niall.misty.utils.ui.paginator.Paginator;
 import sh.niall.misty.utils.ui.paginator.buttons.PaginatorOption;
-import sh.niall.yui.commands.Context;
+import sh.niall.yui.cogs.commands.context.Context;
 
 import java.awt.*;
 
@@ -31,7 +31,7 @@ public class RemindersDeleteButton extends PaginatorOption {
                 EmbedBuilder embedBuilder = new EmbedBuilder();
                 embedBuilder.setTitle("Reminders");
                 embedBuilder.setDescription("You have no more reminders!");
-                embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getUser().getEffectiveAvatarUrl());
+                embedBuilder.setAuthor(UserSettings.getName(ctx), null, ctx.getAuthorUser().getEffectiveAvatarUrl());
                 embedBuilder.setColor(Color.RED);
                 paginator.gotoPage(paginator.addPage(embedBuilder));
             }

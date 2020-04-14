@@ -4,7 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import sh.niall.yui.commands.Context;
+import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.exceptions.CommandException;
 
 import java.time.Instant;
@@ -173,9 +173,9 @@ public class Tag {
         if (!searchName.equals(searchName.replaceAll(" +", " ")))
             throw new CommandException("Playlist names can't have multiple spaces!");
 
-        int reservedWordIndex = ctx.getSubCommands().indexOf(searchName.split(" ")[0]);
-        if (reservedWordIndex > -1)
-            throw new CommandException(String.format("Tag name is using the reserved keyword `%s`!", ctx.getSubCommands().get(reservedWordIndex)));
+        String testSearch = searchName.split(" ")[0].trim();
+        if (ctx.getSubCommandAliases().contains(testSearch))
+            throw new CommandException(String.format("Tag name is using the reserved keyword `%s`!", testSearch));
     }
 
     /**

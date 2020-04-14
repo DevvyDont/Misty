@@ -7,9 +7,9 @@ import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEve
 import sh.niall.misty.utils.ui.paginator.buttons.NextPageButton;
 import sh.niall.misty.utils.ui.paginator.buttons.PaginatorOption;
 import sh.niall.misty.utils.ui.paginator.buttons.PreviousPageButton;
-import sh.niall.yui.commands.Context;
+import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.exceptions.CommandException;
-import sh.niall.yui.exceptions.WaiterException;
+import sh.niall.yui.exceptions.YuiException;
 import sh.niall.yui.waiter.WaiterStorage;
 
 import java.time.Instant;
@@ -39,7 +39,7 @@ public class Paginator {
         this.anyoneCanUse = anyoneCanUse;
     }
 
-    public void run() throws CommandException, WaiterException {
+    public void run() throws YuiException {
         if (pages.isEmpty())
             throw new CommandException("Paginator started without any pages!");
         pages = setPageNumbers(pages);
@@ -66,7 +66,7 @@ public class Paginator {
         embedMessage.clearReactions().queue();
     }
 
-    private void waitForReaction() throws WaiterException {
+    private void waitForReaction() throws YuiException {
         WaiterStorage waiterStorage = new WaiterStorage(
                 GuildMessageReactionAddEvent.class,
                 check -> {
@@ -74,22 +74,22 @@ public class Paginator {
                     boolean correctMessage = e.getMessageIdLong() == embedMessage.getIdLong();
                     boolean correctUser;
                     if (anyoneCanUse)
-                        correctUser = e.getUser().getIdLong() == ctx.getAuthor().getIdLong();
+                        correctUser = e.getUser().getIdLong() != ctx.getSelf().getIdLong();
                     else
-                        correctUser = e.getUser().getIdLong() != ctx.getMe().getIdLong();
+                        correctUser = e.getUser().getIdLong() != ctx.getAuthor().getIdLong();
                     return (correctMessage && correctUser);
                 },
                 timeout,
                 TimeUnit.SECONDS
         );
-        ctx.getYui().getEventWaiter().waitForNewEvent(waiterStorage); // Blocks until .getEvent is returned
+        ctx.getYui().waitForNewEvent(waiterStorage); // Blocks until .getEvent is returned
         GuildMessageReactionAddEvent event = (GuildMessageReactionAddEvent) waiterStorage.getEvent();
         if (event == null) {
             stop();
             return;
         }
         MessageReaction reaction = event.getReaction();
-        reaction.removeReaction(ctx.getUser()).queue();
+        reaction.removeReaction(ctx.getAuthorUser()).queue();
         String reactionEmoji = reaction.getReactionEmote().getEmoji();
         for (PaginatorOption option : options) {
             if (option.equals(reactionEmoji))

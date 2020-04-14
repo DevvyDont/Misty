@@ -8,7 +8,7 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
 import org.bson.Document;
 import sh.niall.misty.Misty;
-import sh.niall.yui.commands.Context;
+import sh.niall.yui.cogs.commands.context.Context;
 import sh.niall.yui.exceptions.CommandException;
 
 import java.time.Instant;
@@ -145,7 +145,7 @@ public class UserSettings {
     }
 
     public static String getAvatarUrl(Context ctx, long userId) {
-        return getAvatarUrl(ctx.getBot(), userId);
+        return getAvatarUrl(ctx.getJda(), userId);
     }
 
     public static String getAvatarUrl(JDA jda, long userId) {
