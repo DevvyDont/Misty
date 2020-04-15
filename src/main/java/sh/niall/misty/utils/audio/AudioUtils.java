@@ -82,7 +82,7 @@ public class AudioUtils {
 
     public static List<AudioTrack> runQuery(AudioPlayerManager audioMgr, String query, Guild guild) throws MistyException, AudioException {
         TrackWaiter waiter = new TrackWaiter();
-        audioMgr.loadItemOrdered(guild, query, new AudioLoadResultHandler() {
+        audioMgr.loadItemOrdered((guild != null) ? guild : 0, query, new AudioLoadResultHandler() {
             @Override
             public void trackLoaded(AudioTrack track) {
                 waiter.setResult(Collections.singletonList(track), null);

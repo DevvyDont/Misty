@@ -10,6 +10,8 @@ import net.dv8tion.jda.api.entities.Guild;
 import org.apache.commons.codec.binary.Base64;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sh.niall.misty.Misty;
 import sh.niall.misty.errors.AudioException;
 import sh.niall.misty.errors.MistyException;
@@ -23,6 +25,8 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class SongCache {
@@ -30,19 +34,11 @@ public class SongCache {
     private MongoCollection<Document> db = Misty.database.getCollection("songCache");
     private AudioPlayerManager audioPlayerManager;
     private int daysToExpire = 30;
+    private Logger logger = LoggerFactory.getLogger(SongCache.class);
 
     public SongCache(Yui yui, AudioPlayerManager audioPlayerManager) {
         this.audioPlayerManager = audioPlayerManager;
-        yui.getExecutor().execute(() -> {
-            while (true) {
-                updateTask();
-                try {
-                    Thread.sleep(TimeUnit.HOURS.toMillis(1));
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+        ((ScheduledExecutorService) Executors.newSingleThreadScheduledExecutor()).scheduleAtFixedRate(this::updateTask, 0, 1, TimeUnit.HOURS);
     }
 
     /**
@@ -140,25 +136,37 @@ public class SongCache {
      * Updates songs which have expired
      */
     public void updateTask() {
+        this.logger.info("Updating song cache...");
         try {
             // Find all documents which have expired
             for (Document document : db.find(Filters.lte("expires", Instant.now().getEpochSecond()))) {
                 // Get the URL and request for a new track
                 String url = decodeString(document.getString("data")).getInfo().uri;
                 AudioTrack newTrack = AudioUtils.runQuery(audioPlayerManager, url, null).get(0);
-                String newData = encodeTrack(newTrack);
-
-                // If it matches, don't bother updating it.
-                if (newData.equals(document.getString("data")))
+                String newData;
+                // Encoding the new track can error if youtube makes it unavailable
+                try {
+                    newData = encodeTrack(newTrack);
+                } catch (NullPointerException ignored) {
+                    this.logger.info(String.format("Removing %s from the cache as it's unavailable", url));
                     continue;
+                }
 
-                // If it's different, update it.
+                // Create the updated document
                 Document updatedDocument = new Document();
-                updatedDocument.append("data", newData);
+
+                // Set the expired field - This is changed no matter what
                 updatedDocument.append("expires", Instant.now().getEpochSecond() + TimeUnit.DAYS.toSeconds(daysToExpire));
+
+                // Check to see if the entry has expired
+                if (!newData.equals(document.getString("data")))
+                    updatedDocument.append("data", newData);
+
                 db.updateOne(Filters.eq("_id", document.get("_id", ObjectId.class)), new Document("$set", updatedDocument));
             }
+            this.logger.info("Song cache updated!");
         } catch (Exception e) {
+            this.logger.error("Updating song cache failed!");
             e.printStackTrace();
         }
     }
