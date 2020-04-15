@@ -140,6 +140,7 @@ public class SongCache {
         try {
             // Find all documents which have expired
             for (Document document : db.find(Filters.lte("expires", Instant.now().getEpochSecond()))) {
+                Thread.sleep(TimeUnit.MINUTES.toMillis(2));
                 // Get the URL and request for a new track
                 String url = decodeString(document.getString("data")).getInfo().uri;
                 AudioTrack newTrack = AudioUtils.runQuery(audioPlayerManager, url, null).get(0);
@@ -165,7 +166,6 @@ public class SongCache {
 
                 // Update DB and wait
                 db.updateOne(Filters.eq("_id", document.get("_id", ObjectId.class)), new Document("$set", updatedDocument));
-                Thread.sleep(TimeUnit.MINUTES.toMillis(2));
             }
             this.logger.info("Song cache updated!");
         } catch (Exception e) {
