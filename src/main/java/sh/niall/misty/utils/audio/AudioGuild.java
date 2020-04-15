@@ -297,7 +297,9 @@ public class AudioGuild extends AudioEventAdapter {
 
     @Override
     public void onTrackException(AudioPlayer player, AudioTrack track, FriendlyException exception) {
-        yui.reportError(null, exception);
+        yui.getJda().getTextChannelById(this.lastTextChannel).sendMessage(
+                "⚠️ " + exception.getMessage()
+        ).queue();
     }
 
     @Override

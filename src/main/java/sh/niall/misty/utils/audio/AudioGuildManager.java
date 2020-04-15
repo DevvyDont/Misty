@@ -11,6 +11,8 @@ import sh.niall.yui.Yui;
 import sh.niall.yui.exceptions.CommandException;
 
 import java.util.HashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class AudioGuildManager {
@@ -27,12 +29,7 @@ public class AudioGuildManager {
         AudioSourceManagers.registerRemoteSources(this.audioPlayerManager);
 
         // Start the inactive checker
-        yui.getExecutor().submit(() -> {
-            while (true) {
-                Thread.sleep(10000);
-                runInactiveCheck();
-            }
-        });
+        ((ScheduledExecutorService) Executors.newSingleThreadScheduledExecutor()).scheduleAtFixedRate(this::runInactiveCheck, 0, 10, TimeUnit.MINUTES);
     }
 
     public AudioPlayerManager getAudioPlayerManager() {
