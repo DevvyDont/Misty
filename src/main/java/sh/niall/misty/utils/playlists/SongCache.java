@@ -38,7 +38,7 @@ public class SongCache {
 
     public SongCache(Yui yui, AudioPlayerManager audioPlayerManager) {
         this.audioPlayerManager = audioPlayerManager;
-        ((ScheduledExecutorService) Executors.newSingleThreadScheduledExecutor()).scheduleAtFixedRate(this::updateTask, 0, 1, TimeUnit.HOURS);
+        ((ScheduledExecutorService) Executors.newSingleThreadScheduledExecutor()).scheduleAtFixedRate(this::updateTask, 0, 1, TimeUnit.DAYS);
     }
 
     /**
@@ -144,6 +144,7 @@ public class SongCache {
                 String url = decodeString(document.getString("data")).getInfo().uri;
                 AudioTrack newTrack = AudioUtils.runQuery(audioPlayerManager, url, null).get(0);
                 String newData;
+
                 // Encoding the new track can error if youtube makes it unavailable
                 try {
                     newData = encodeTrack(newTrack);
@@ -162,7 +163,9 @@ public class SongCache {
                 if (!newData.equals(document.getString("data")))
                     updatedDocument.append("data", newData);
 
+                // Update DB and wait
                 db.updateOne(Filters.eq("_id", document.get("_id", ObjectId.class)), new Document("$set", updatedDocument));
+                Thread.sleep(TimeUnit.MINUTES.toMillis(1));
             }
             this.logger.info("Song cache updated!");
         } catch (Exception e) {
