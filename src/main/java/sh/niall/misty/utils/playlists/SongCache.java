@@ -38,7 +38,7 @@ public class SongCache {
 
     public SongCache(Yui yui, AudioPlayerManager audioPlayerManager) {
         this.audioPlayerManager = audioPlayerManager;
-        ((ScheduledExecutorService) Executors.newSingleThreadScheduledExecutor()).scheduleAtFixedRate(this::updateTask, 0, 1, TimeUnit.DAYS);
+        ((ScheduledExecutorService) Executors.newSingleThreadScheduledExecutor()).scheduleAtFixedRate(this::updateTask, 0, 2, TimeUnit.DAYS);
     }
 
     /**
@@ -165,7 +165,7 @@ public class SongCache {
 
                 // Update DB and wait
                 db.updateOne(Filters.eq("_id", document.get("_id", ObjectId.class)), new Document("$set", updatedDocument));
-                Thread.sleep(TimeUnit.MINUTES.toMillis(1));
+                Thread.sleep(TimeUnit.MINUTES.toMillis(2));
             }
             this.logger.info("Song cache updated!");
         } catch (Exception e) {
